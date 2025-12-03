@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Acompanhar pedido</title>
+  <link rel="stylesheet" href="status.css">
+</head>
+<body>
+  <main class="wrap">
+    <h1>Seu pedido</h1>
+    <div id="orderId" class="muted">—</div>
+
+    <section class="card">
+      <div class="line">
+        <span>Status:</span>
+        <b id="status">—</b>
+      </div>
+      <div class="line">
+        <span>Resumo:</span>
+        <b id="total">—</b>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Etapas</h2>
+      <ol id="steps" class="steps">
+        <li data-k="new">Pedido enviado</li>
+        <li data-k="received">Recebido pelo PDV</li>
+        <li data-k="preparing">Sendo preparado</li>
+        <li data-k="ready">Pronto para retirada/entrega</li>
+        <li data-k="out_for_delivery">Saiu para entrega</li>
+        <li data-k="done">Concluído</li>
+      </ol>
+      <div id="when" class="muted"></div>
+    </section>
+
+    <section class="card">
+      <h2>Notificações</h2>
+      <p id="pushInfo" class="muted">Você pode ativar notificações no navegador.</p>
+      <button id="enablePush" class="btn">Ativar notificações</button>
+    </section>
+
+    <section class="card">
+      <h2>Itens</h2>
+      <div id="items"></div>
+    </section>
+  </main>
+
+  <script type="module" src="status.js"></script>
+</body>
+</html>
