@@ -5,12 +5,104 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Acompanhar pedido</title>
   <link rel="stylesheet" href="status.css">
+  <style>
+    /* Estilos adicionais para múltiplos pedidos */
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+    
+    #myOrdersList {
+      margin-top: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f8f9fa;
+      padding: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .order-item {
+      padding: 10px;
+      margin-bottom: 8px;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .order-item:hover {
+      border-color: #007bff;
+      transform: translateX(4px);
+    }
+    
+    .order-item.current {
+      border-color: #28a745;
+      background: #e8f5e9;
+    }
+    
+    .status-canceled {
+      color: #dc3545 !important;
+      font-weight: bold;
+    }
+    
+    .steps li.canceled-order {
+      opacity: 0.4;
+      text-decoration: line-through;
+    }
+    
+    .steps li[data-k="canceled"] {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    
+    .alert-box {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 15px;
+      display: none;
+    }
+    
+    .alert-box.show {
+      display: block;
+    }
+  </style>
 </head>
 <body>
   <main class="wrap">
-    <h1>Seu pedido</h1>
-    <div id="orderId" class="muted">—</div>
-
+    <div class="header-actions">
+      <div>
+        <h1>Seu pedido</h1>
+        <div id="orderId" class="muted">—</div>
+      </div>
+      <button id="btnMyOrders" class="btn-secondary">📋 Meus Pedidos</button>
+    </div>
+    
+    <div id="myOrdersList" hidden></div>
+    
+    <div id="cancelAlert" class="alert-box">
+      ⚠️ Este pedido foi cancelado pelo estabelecimento.
+    </div>
+    
     <section class="card">
       <div class="line">
         <span>Status:</span>
@@ -21,7 +113,7 @@
         <b id="total">—</b>
       </div>
     </section>
-
+    
     <section class="card">
       <h2>Etapas</h2>
       <ol id="steps" class="steps">
@@ -31,23 +123,22 @@
         <li data-k="ready">Pronto para retirada/entrega</li>
         <li data-k="out_for_delivery">Saiu para entrega</li>
         <li data-k="done">Concluído</li>
-        
+        <li data-k="canceled">Cancelado</li>
       </ol>
       <div id="when" class="muted"></div>
     </section>
-
+    
     <section class="card">
       <h2>Notificações</h2>
       <p id="pushInfo" class="muted">Você pode ativar notificações no navegador.</p>
       <button id="enablePush" class="btn">Ativar notificações</button>
     </section>
-
+    
     <section class="card">
       <h2>Itens</h2>
       <div id="items"></div>
     </section>
   </main>
-
   <script type="module" src="status.js"></script>
 </body>
 </html>
