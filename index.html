@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>📦 Catálogo — Loja</title>
+  <link rel="stylesheet" href="./catalog.css">
+  <link rel="stylesheet" href="./users/checkout.css">
+
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Catálogo — <b>Produtos</b></div>
+    <div id="meta" class="sub">Conectando…</div>
+    <button id="toggleCart" class="cartBtn" aria-haspopup="dialog" aria-controls="cartPanel">
+      🛒 <span id="cartCount">0</span>
+    </button>
+  </header>
+
+  <main class="layout">
+    <section class="tools">
+      <label class="inp" title="Buscar por nome ou código">
+        🔎 <input id="q" placeholder="Buscar produto…" />
+      </label>
+      <div class="pills">
+        <button id="pillStock" class="pill" data-active="true" title="Ocultar sem estoque">Sem estoque oculto</button>
+        <button id="pillMin" class="pill" data-active="false" title="Ocultar min=0">min=0 visível</button>
+        <span class="pill muted" id="count">0 itens</span>
+      </div>
+    </section>
+
+    <section id="catalog" aria-live="polite"></section>
+    <div id="empty" class="empty" hidden>Nenhum produto encontrado com os filtros atuais.</div>
+  </main>
+
+  <!-- Cart drawer -->
+  <aside id="cartPanel" class="cart" role="dialog" aria-label="Carrinho" aria-modal="false">
+    <div class="cartHead">
+      <div class="cartTitle">Seu carrinho</div>
+      <button id="closeCart" class="iconBtn" title="Fechar">✕</button>
+    </div>
+    <div id="cartBody" class="cartBody"></div>
+    <div class="cartFoot">
+      <div class="line"><span>Itens:</span><b id="cartItems">0</b></div>
+      <div class="line big"><span>Total:</span><b id="cartTotal">R$ 0,00</b></div>
+      <div class="actions">
+        <button id="clearCart" class="btn ghost">Limpar</button>
+       <a id="checkoutLink" href="users/checkout.html" class="btn primary">Finalizar</a>
+
+      </div>
+    </div>
+  </aside>
+
+  <footer class="foot"><span id="ts">—</span></footer>
+
+  <!-- App -->
+  <script type="module" src="./catalog.js" defer></script>
+<script type="module">
+  import { createOrderWithCheckout } from './users/checkout.js';
+
+  // Exemplo: adapte para o seu objeto de carrinho real
+  // Precisa ter: items[] e totals{ subtotal, discount, total }
+  function getCartSnapshot(){
+    const raw = localStorage.getItem('cart_data'); // ou de onde você guarda
+    const obj = raw ? JSON.parse(raw) : { items:[], totals:{subtotal:0, discount:0, total:0} };
+    return obj;
+  }
+
+  document.getElementById('btnCheckout').addEventListener('click', async () => {
+    const cart = getCartSnapshot();
+    const res = await createOrderWithCheckout(cart);
+    if (res?.id) {
+      // opcional: limpar carrinho
+      // localStorage.removeItem('cart_data');
+      alert(`Pedido enviado! #${res.id}`);
+      // redirecionar ou mostrar confirmação
+    }
+  });
+</script>
+
+</body>
+</html>
