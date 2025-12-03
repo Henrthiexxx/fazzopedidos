@@ -236,7 +236,7 @@ async function openCheckoutPage(cartSnap){
   });
 
   // ações
-  ui.back.addEventListener('click', ()=> history.length>1 ? history.back() : (location.href='index.html'));
+  ui.back.addEventListener('click', ()=> history.length>1 ? history.back() : (location.href='/status.html'));
 
   ui.confirm.addEventListener('click', async ()=>{
     const name = ui.name.value.trim();
