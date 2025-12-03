@@ -23,8 +23,8 @@ if (!orderId) {
 // Mapa humanizado de status
 function humanStatus(s) {
   const map = {
-    new: 'Enviado',
-    received: 'Recebido pelo PDV',
+    new: 'Na Fila',
+    received: 'Pedido Aceito!',
     preparing: 'Sendo preparado',
     ready: 'Pronto',
     out_for_delivery: 'Saiu para entrega',
