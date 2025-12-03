@@ -297,7 +297,7 @@ async function openCheckoutPage(cartSnap){
       // limpa carrinho
       localStorage.setItem(LS_CART, JSON.stringify([]));
       alert(`Pedido enviado!\nNúmero: ${ref.id}`);
-      location.href = 'index.html';
+      location.href = '/status.html';
     }catch(e){
       console.warn('[checkout] falhou envio direto, talvez você já tenha fila offline no catálogo.', e);
       alert('Sem internet agora. Abra o catálogo novamente para reencaminhar a fila quando voltar a conexão.');
