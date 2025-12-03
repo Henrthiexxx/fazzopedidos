@@ -1,4 +1,4 @@
-// status.js — Acompanhar pedido do cliente (sem spam de writes)
+// status.js — Acompanhar pedidos do cliente (múltiplos pedidos + cancelamento)
 
 // Utilidades básicas
 const moneyBR = n => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -7,11 +7,24 @@ const qs = new URLSearchParams(location.search);
 
 // Onde o catálogo guarda o último pedido enviado
 const LS_LAST = 'checkout_last_order_id';
+const LS_MY_ORDERS = 'my_order_ids'; // lista de pedidos do cliente
 // Acks locais: evita regravar clientNotify.* várias vezes por status neste dispositivo
 const LS_ACK_PREFIX = 'order_ack_'; // ordem: order_ack_{orderId}_{status}
 
 // Resolve orderId via ?id=... ou último do LS
 let orderId = qs.get('id') || localStorage.getItem(LS_LAST) || '';
+
+// Salva pedido na lista de "meus pedidos"
+if (orderId) {
+  try {
+    const myOrders = JSON.parse(localStorage.getItem(LS_MY_ORDERS) || '[]');
+    if (!myOrders.includes(orderId)) {
+      myOrders.push(orderId);
+      localStorage.setItem(LS_MY_ORDERS, JSON.stringify(myOrders));
+    }
+  } catch {}
+}
+
 const elOrderId = document.getElementById('orderId');
 if (elOrderId) elOrderId.textContent = orderId ? `#${orderId}` : 'Sem ID';
 
@@ -29,7 +42,7 @@ function humanStatus(s) {
     ready: 'Pronto',
     out_for_delivery: 'Saiu para entrega',
     done: 'Concluído',
-    canceled: 'Cancelado'
+    canceled: '❌ Cancelado'
   };
   return map[s] || s || '—';
 }
@@ -67,6 +80,12 @@ function paintSteps(o) {
 
     li.classList.toggle('done', has);
     li.classList.toggle('active', o.status === k && !has);
+    
+    // Se cancelado, marca tudo como inativo exceto o canceled
+    if (o.status === 'canceled' && k !== 'canceled') {
+      li.classList.remove('active');
+      li.classList.add('canceled-order');
+    }
 
     // Renderiza mantendo um label estável + "quando" à direita
     const when = has ? formatDT(ts[k]) : '';
@@ -94,7 +113,19 @@ let unsub = null;
 
     // Header de status
     const elStatus = document.getElementById('status');
-    if (elStatus) elStatus.textContent = humanStatus(o.status);
+    if (elStatus) {
+      elStatus.textContent = humanStatus(o.status);
+      // Adiciona classe especial se cancelado
+      if (o.status === 'canceled') {
+        elStatus.classList.add('status-canceled');
+        const alertBox = document.getElementById('cancelAlert');
+        if (alertBox) alertBox.classList.add('show');
+      } else {
+        elStatus.classList.remove('status-canceled');
+        const alertBox = document.getElementById('cancelAlert');
+        if (alertBox) alertBox.classList.remove('show');
+      }
+    }
 
     // Totais
     const totalVal = o?.totals?.total ?? 0;
@@ -130,6 +161,16 @@ let unsub = null;
       if (o.status === 'ready' && !hasAck('ready') && !o?.clientNotify?.readyAt) {
         updates['clientNotify.readyAt'] = firebase.firestore.FieldValue.serverTimestamp();
       }
+      if (o.status === 'out_for_delivery' && !hasAck('out_for_delivery') && !o?.clientNotify?.outForDeliveryAt) {
+        updates['clientNotify.outForDeliveryAt'] = firebase.firestore.FieldValue.serverTimestamp();
+      }
+      if (o.status === 'canceled' && !hasAck('canceled') && !o?.clientNotify?.canceledAt) {
+        updates['clientNotify.canceledAt'] = firebase.firestore.FieldValue.serverTimestamp();
+        // Alerta o cliente sobre cancelamento
+        once(`cancel_alert_${orderId}`, () => {
+          alert('⚠️ Seu pedido foi cancelado pelo estabelecimento.');
+        });
+      }
 
       if (Object.keys(updates).length) {
         try {
@@ -137,6 +178,8 @@ let unsub = null;
           if (updates['clientNotify.receivedAt']) markAck('received');
           if (updates['clientNotify.preparingAt']) markAck('preparing');
           if (updates['clientNotify.readyAt']) markAck('ready');
+          if (updates['clientNotify.outForDeliveryAt']) markAck('out_for_delivery');
+          if (updates['clientNotify.canceledAt']) markAck('canceled');
         } catch (e) {
           // Regras podem bloquear — só loga, não alerta o usuário
           console.warn('[status] ack falhou (ignorado):', e?.message);
@@ -151,6 +194,54 @@ let unsub = null;
 
 // Limpa listener ao sair
 window.addEventListener('beforeunload', () => { try { unsub && unsub(); } catch {} });
+
+// === Lista de meus pedidos (sidebar ou dropdown) ===
+const btnMyOrders = document.getElementById('btnMyOrders');
+const myOrdersList = document.getElementById('myOrdersList');
+
+if (btnMyOrders && myOrdersList) {
+  btnMyOrders.addEventListener('click', () => {
+    myOrdersList.hidden = !myOrdersList.hidden;
+    loadMyOrders();
+  });
+}
+
+async function loadMyOrders() {
+  if (!myOrdersList) return;
+  
+  try {
+    const myOrders = JSON.parse(localStorage.getItem(LS_MY_ORDERS) || '[]');
+    if (!myOrders.length) {
+      myOrdersList.innerHTML = '<div class="muted">Nenhum pedido anterior.</div>';
+      return;
+    }
+
+    myOrdersList.innerHTML = '<div class="muted">Carregando...</div>';
+
+    const { db } = await import('./server.js');
+    const promises = myOrders.map(id => db.collection('orders').doc(id).get());
+    const docs = await Promise.all(promises);
+
+    const html = docs.map(doc => {
+      if (!doc.exists) return '';
+      const o = doc.data();
+      const st = o.status || 'new';
+      const total = o?.totals?.total ?? 0;
+      const isCurrent = doc.id === orderId;
+      return `
+        <div class="order-item ${isCurrent ? 'current' : ''}" onclick="window.location.href='status.html?id=${doc.id}'">
+          <div><b>#${doc.id}</b> ${isCurrent ? '(atual)' : ''}</div>
+          <div class="muted">${humanStatus(st)} • ${moneyBR(total)}</div>
+        </div>
+      `;
+    }).join('');
+
+    myOrdersList.innerHTML = html || '<div class="muted">Nenhum pedido encontrado.</div>';
+  } catch (e) {
+    console.error('Erro ao carregar meus pedidos:', e);
+    myOrdersList.innerHTML = '<div class="muted">Erro ao carregar pedidos.</div>';
+  }
+}
 
 // === (Opcional) Notificações Push via FCM ===
 const btnPush = document.getElementById('enablePush');
