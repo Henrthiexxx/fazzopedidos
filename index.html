@@ -818,6 +818,672 @@
     <span id="ts">—</span>
   </footer>
 
-  <script type="module" src="./catalog.js"></script>
+  <script type="module">
+    // Inline catalog.js com estilos premium
+    const moneyBR = (n)=> Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const collator = new Intl.Collator('pt-BR', { sensitivity:'base', numeric:true });
+
+    const LS_PRODUCTS_VIEW = 'catalog_products_view';
+    const LS_CART = 'catalog_cart';
+    const LS_CART_UPDATED = 'catalog_cart_updated_at';
+
+    const els = {
+      meta: document.getElementById('meta'),
+      q: document.getElementById('q'),
+      catalog: document.getElementById('catalog'),
+      empty: document.getElementById('empty'),
+      count: document.getElementById('count'),
+      ts: document.getElementById('ts'),
+      pillStock: document.getElementById('pillStock'),
+      pillMin: document.getElementById('pillMin'),
+      cartBtn: document.getElementById('toggleCart'),
+      closeCart: document.getElementById('closeCart'),
+      cartPanel: document.getElementById('cartPanel'),
+      cartBody: document.getElementById('cartBody'),
+      cartItems: document.getElementById('cartItems'),
+      cartTotal: document.getElementById('cartTotal'),
+      clearCart: document.getElementById('clearCart'),
+      checkout: document.getElementById('checkout'),
+      cartCount: document.getElementById('cartCount'),
+    };
+
+    const params = new URLSearchParams(location.search);
+    const qsStock = params.get('stock');
+    const FILTERS = {
+      hideNoStock: qsStock === null ? true : qsStock === '1',
+      hideMinZero: params.get('min') === '1',
+    };
+
+    let db, unsub = null;
+    let rawSrc = [];
+    let all = [];
+    let indexById = new Map();
+    let cart = loadCart();
+
+    wireUI();
+
+    (async function bootstrap(){
+      try{
+        await initFirebase();
+        await firstLoad();
+        setupRealtime();
+      }catch(e){
+        console.error('[catalog] bootstrap error', e);
+        loadFromLocal();
+      }
+    })();
+
+    async function initFirebase(){
+      const mod = await import('./server.js');
+      db = mod.db;
+      try { if (mod.ready) await mod.ready; } catch {}
+    }
+
+    function normalize(raw){
+      if (raw == null) return [];
+      let x = raw;
+      if (typeof x === 'string') {
+        const s = x.trim();
+        try { x = JSON.parse(s); }
+        catch { try { x = JSON.parse('['+s.replace(/}\s*[\n,]?\s*\{/g,'},{')+']'); } catch { return []; } }
+      }
+      let arr = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
+      return arr.map(it => typeof it==='string' ? (()=>{try{return JSON.parse(it)}catch{return null}})() : it).filter(Boolean);
+    }
+
+    function isActive(p){
+      if(!p) return false;
+      if (p.ativo === false || p.ativo === 0 || p.ativo === 'false' || p.ativo === '0') return false;
+      if ('status' in p) {
+        const s = String(p.status).toLowerCase();
+        if (['inativo','inactive','off','0','false'].includes(s)) return false;
+      }
+      return true;
+    }
+
+    function minVal(p){ const n = Number(p?.min); return Number.isFinite(n) ? n : null; }
+    
+    function stockVal(p){
+      const names = ['estoque','qtd','quantidade','saldo','qtdEstoque','estoqueAtual','stock'];
+      for (const k of names) {
+        const v = p?.[k];
+        const n = Number(v);
+        if (Number.isFinite(n)) return n;
+      }
+      return null;
+    }
+
+    function productPrice(p){
+      const cand = ['precoVenda','preco','price','valor','valorVenda','unitPrice'];
+      for (const k of cand) {
+        const v = Number(p?.[k]);
+        if (!Number.isNaN(v) && v != null) return v;
+      }
+      return 0;
+    }
+
+    function productId(p){
+      const base = p?.id ?? p?.codigoBarras ?? `${p?.nome || 'item'}|${productPrice(p)}`;
+      return String(base);
+    }
+
+    function buildLocalView(raw){
+      let out = normalize(raw).filter(isActive);
+      if (FILTERS.hideMinZero) out = out.filter(p => minVal(p) !== 0);
+      if (FILTERS.hideNoStock) out = out.filter(p => {
+        const s = stockVal(p);
+        return s === null ? true : s > 0;
+      });
+      indexById = new Map();
+      for (const p of out) indexById.set(productId(p), p);
+      out.sort((a,b)=> collator.compare(a?.nome?.toString?.()||'', b?.nome?.toString?.()||''));
+      return out;
+    }
+
+    function groupByCategory(arr){
+      const map = new Map();
+      for (const p of arr) {
+        let c = (p?.categoria ?? '').toString().trim();
+        if (!c) c = 'Sem categoria';
+        if (!map.has(c)) map.set(c, []);
+        map.get(c).push(p);
+      }
+      const cats = Array.from(map.keys()).sort((a,b)=> collator.compare(a,b));
+      return cats.map(cat => ({
+        cat,
+        items: map.get(cat).slice().sort((a,b)=> collator.compare(a?.nome?.toString?.()||'', b?.nome?.toString?.()||'')),
+      }));
+    }
+
+    function render(filterText=""){
+      const q = (filterText||"").toLowerCase();
+      const filtered = all.filter(p =>
+        !q ||
+        (p.nome||'').toLowerCase().includes(q) ||
+        (p.codigoBarras||'').toLowerCase().includes(q)
+      );
+      const groups = groupByCategory(filtered);
+
+      let totalShown = 0;
+      const html = groups.map(g => {
+        if (!g.items.length) return '';
+        totalShown += g.items.length;
+        const cards = g.items.map(p => {
+          const id = productId(p);
+          return `
+            <div class="card" data-id="${id}">
+              <div class="card-content">
+                <div class="card-header">
+                  <div class="nm">${p.nome || '—'}</div>
+                  <div class="pr">${moneyBR(productPrice(p))}</div>
+                </div>
+                <div class="hint">
+                  ${p.codigoBarras ? '<span>📦 #'+p.codigoBarras+'</span>' : ''}
+                  ${p.categoria ? '<span>🏷️ '+p.categoria+'</span>' : ''}
+                </div>
+                <button class="btnAdd" data-add="${id}" type="button">Adicionar ao Carrinho</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        return `
+          <section class="cat">
+            <div class="cat-header">
+              <div class="cat-title">${g.cat}</div>
+              <div class="cat-count">${g.items.length}</div>
+            </div>
+            <div class="grid">${cards}</div>
+          </section>
+        `;
+      }).join('');
+
+      els.catalog.innerHTML = html;
+      els.count.textContent = `${totalShown} produto${totalShown===1?'':'s'}`;
+      els.empty.hidden = totalShown > 0;
+    }
+
+    function updateMeta(viewCount, totalSrc, online=true){
+      const dt = new Date();
+      els.meta.textContent = online ? 'Online' : 'Offline';
+      els.ts.textContent = `Atualizado ${dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`;
+    }
+
+    async function firstLoad(){
+      const ref = db.collection('data').doc('keys');
+      const snap = await ref.get();
+      const d = snap.exists ? snap.data() : {};
+      rawSrc = d.produtos || [];
+      const view = buildLocalView(rawSrc);
+      localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
+      all = view;
+      render(els.q.value);
+      updateMeta(view.length, normalize(rawSrc).length, true);
+    }
+
+    function setupRealtime(){
+      const ref = db.collection('data').doc('keys');
+      unsub = ref.onSnapshot(doc => {
+        const d = doc.exists ? doc.data() : {};
+        rawSrc = d.produtos || [];
+        const view = buildLocalView(rawSrc);
+        localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
+        all = view;
+        render(els.q.value);
+        updateMeta(view.length, normalize(rawSrc).length, true);
+      }, err => {
+        console.error('[catalog] listener error', err);
+      });
+    }
+
+    function loadFromLocal(){
+      try{
+        const local = JSON.parse(localStorage.getItem(LS_PRODUCTS_VIEW) || '[]');
+        all = Array.isArray(local) ? local : [];
+        render(els.q.value);
+        updateMeta(all.length, all.length, false);
+      }catch{}
+    }
+
+    function wireUI(){
+      els.q?.addEventListener('input', () => render(els.q.value));
+      els.cartBtn?.addEventListener('click', () => els.cartPanel?.classList.add('open'));
+      els.closeCart?.addEventListener('click', () => els.cartPanel?.classList.remove('open'));
+
+      els.catalog?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-add]');
+        if (!btn) return;
+        const id = btn.dataset.add;
+        const p = indexById.get(id);
+        if (!p) return;
+        addToCart(fromProduct(p));
+      });
+
+      els.cartBody?.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        const { id, act } = btn.dataset;
+        if (act === 'inc') incItem(id, +1);
+        if (act === 'dec') incItem(id, -1);
+        if (act === 'del') removeItem(id);
+      });
+
+      els.clearCart?.addEventListener('click', async () => {
+        if (!cart.length) return;
+        const ok = await showConfirm('Deseja limpar o carrinho?', 'Limpar', 'Cancelar');
+        if (ok) { cart = []; saveCart(); }
+      });
+
+      els.checkout?.addEventListener('click', doCheckout);
+      renderCart();
+    }
+
+    async function showConfirm(message, confirmText, cancelText){
+      return new Promise(resolve => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML = `
+          <div class="modal" style="max-width:420px">
+            <div class="modal-header">
+              <div class="modal-title">Confirmação</div>
+            </div>
+            <div class="modal-body">
+              <p style="color:var(--gray-400)">${message}</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn ghost" id="btnCancel">${cancelText}</button>
+              <button class="btn primary" id="btnConfirm">${confirmText}</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(backdrop);
+        const close = (result) => { backdrop.remove(); resolve(result); };
+        backdrop.querySelector('#btnCancel').onclick = () => close(false);
+        backdrop.querySelector('#btnConfirm').onclick = () => close(true);
+        backdrop.addEventListener('click', (e) => { if(e.target===backdrop) close(false); });
+      });
+    }
+
+    async function doCheckout(){
+      if (!cart.length) {
+        alert('Carrinho vazio.');
+        return;
+      }
+
+      const snap = cartSnapshot();
+      const form = await openCheckoutModal(snap);
+      if (!form) return;
+
+      const subtotal = snap.totals.subtotal;
+      const cartDisc = snap.totals.discount;
+      const payDisc = form.paymentDiscountApplied || 0;
+      const deliveryFee = form.deliveryFee || 0;
+      const total = +(subtotal - (cartDisc > 0 ? cartDisc : payDisc) + deliveryFee).toFixed(2);
+
+      const order = {
+        status: 'new',
+        createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() ?? null,
+        createdAtClient: Date.now(),
+        updatedAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() ?? null,
+        source: { from:'catalog-premium', domain: location.host, ua: navigator.userAgent },
+        customer: {
+          name: form.name,
+          phone: form.phone,
+          address: { street: form.street, number: form.number || '', district: form.district }
+        },
+        payment: {
+          methodId: form.payment?.id || null,
+          methodName: form.payment?.name || null,
+          discountApplied: payDisc
+        },
+        delivery: {
+          fee: deliveryFee
+        },
+        items: snap.items,
+        totals: { subtotal, discount: cartDisc, paymentDiscount: payDisc, deliveryFee, total }
+      };
+
+      try{
+        const { db, ready } = await import('./server.js');
+        await ready;
+        const ref = db.collection('orders').doc();
+        await ref.set(order);
+        cart = [];
+        saveCart();
+        renderCart();
+        els.cartPanel.classList.remove('open');
+        alert(`✅ Pedido enviado com sucesso!\n\nNúmero: ${ref.id}`);
+      }catch(err){
+        console.error('[checkout] erro:', err);
+        alert('❌ Erro ao enviar pedido. Tente novamente.');
+      }
+    }
+
+    function cartSnapshot(){
+      const items = cart.map(it => ({
+        id: it.id,
+        name: it.name,
+        code: it.code || null,
+        unitPrice: +Number(it.unitPrice || 0).toFixed(2),
+        qty: +Number(it.qty || 1).toFixed(0),
+        lineTotal: +Number((it.unitPrice || 0) * (it.qty || 1)).toFixed(2),
+      }));
+      const subtotal = +items.reduce((s,i)=>s+i.lineTotal,0).toFixed(2);
+      const discount = 0;
+      const total = +(subtotal - discount).toFixed(2);
+      return { items, totals:{ subtotal, discount, total } };
+    }
+
+    async function openCheckoutModal(cart){
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      backdrop.innerHTML = `
+        <div class="modal">
+          <div class="modal-header">
+            <div class="modal-title">Finalizar Pedido</div>
+            <button class="iconBtn" id="modalClose">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-field full">
+                <label class="form-label">Nome Completo <span class="form-badge">Obrigatório</span></label>
+                <input class="form-input" id="ckName" placeholder="Seu nome completo" />
+              </div>
+              <div class="form-field full">
+                <label class="form-label">Telefone <span class="form-badge">Obrigatório</span></label>
+                <input class="form-input" id="ckPhone" placeholder="(00) 0 0000-0000" inputmode="numeric" />
+              </div>
+              <div class="form-field full">
+                <label class="form-label">Endereço <span class="form-badge">Obrigatório</span></label>
+                <input class="form-input" id="ckStreet" placeholder="Rua / Avenida" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Número</label>
+                <input class="form-input" id="ckNumber" placeholder="Nº" />
+              </div>
+              <div class="form-field">
+                <label class="form-label">Bairro <span class="form-badge">Obrigatório</span></label>
+                <select class="form-select" id="ckDistrict">
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+              <div class="form-field full">
+                <label class="form-label">Forma de Pagamento</label>
+                <select class="form-select" id="ckPayment"></select>
+              </div>
+              <div class="modal-summary full">
+                <div class="line">
+                  <span>Subtotal</span>
+                  <span id="ckSubtotal">${moneyBR(cart.totals.subtotal)}</span>
+                </div>
+                <div class="line">
+                  <span>Desconto</span>
+                  <span id="ckDiscount">R$ 0,00</span>
+                </div>
+                <div class="line">
+                  <span>Taxa de Entrega</span>
+                  <span id="ckDelivery">R$ 0,00</span>
+                </div>
+                <div class="line total">
+                  <b>Total</b>
+                  <b id="ckTotal">${moneyBR(cart.totals.total)}</b>
+                </div>
+              </div>
+            </div>
+            <div id="ckError" class="error-msg" style="display:none"></div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn ghost" id="modalCancel">Cancelar</button>
+            <button class="btn primary" id="modalConfirm">Enviar Pedido</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+
+      const ui = {
+        name: backdrop.querySelector('#ckName'),
+        phone: backdrop.querySelector('#ckPhone'),
+        street: backdrop.querySelector('#ckStreet'),
+        number: backdrop.querySelector('#ckNumber'),
+        district: backdrop.querySelector('#ckDistrict'),
+        payment: backdrop.querySelector('#ckPayment'),
+        subtotal: backdrop.querySelector('#ckSubtotal'),
+        discount: backdrop.querySelector('#ckDiscount'),
+        delivery: backdrop.querySelector('#ckDelivery'),
+        total: backdrop.querySelector('#ckTotal'),
+        error: backdrop.querySelector('#ckError'),
+      };
+
+      const ls = (k,d='')=>{ try{return localStorage.getItem(k)??d}catch{return d} };
+      ui.name.value = ls('customer_name');
+      ui.phone.value = ls('customer_phone');
+      ui.street.value = ls('customer_street');
+      ui.number.value = ls('customer_number');
+
+      const { list: districts, fees: feeMap } = await loadDistrictsAndFees();
+      const lastDistrict = ls('customer_district');
+      for (const name of districts) {
+        const fee = Number(feeMap[name] || 0);
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.dataset.fee = String(fee);
+        opt.textContent = fee ? `${name} — ${moneyBR(fee)}` : name;
+        if (name === lastDistrict) opt.selected = true;
+        ui.district.appendChild(opt);
+      }
+
+      const payOpts = await loadOrEnsurePaymentOptions();
+      for (const p of payOpts) {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        if (p.id === ls('payment_method_id')) opt.selected = true;
+        ui.payment.appendChild(opt);
+      }
+
+      const refreshTotals = () => {
+        const subtotal = cart.totals.subtotal;
+        const chosen = payOpts.find(p => p.id === ui.payment.value);
+        const payDisc = calcPayDiscount(subtotal, chosen?.discount);
+        const sel = ui.district.options[ui.district.selectedIndex];
+        const shipFee = Number(sel?.dataset?.fee || 0);
+        const total = Math.max(0, subtotal - payDisc) + shipFee;
+        ui.discount.textContent = moneyBR(payDisc);
+        ui.delivery.textContent = moneyBR(shipFee);
+        ui.total.textContent = moneyBR(total);
+      };
+
+      ui.payment.addEventListener('change', refreshTotals);
+      ui.district.addEventListener('change', refreshTotals);
+      ui.phone.addEventListener('input', () => {
+        const d = ui.phone.value.replace(/\D+/g,'').slice(0,11);
+        let v = d;
+        if (v.length>0) v='('+v;
+        if (v.length>3) v=v.slice(0,3)+') '+v.slice(3);
+        if (v.length>10) v=v.slice(0,10)+'-'+v.slice(10);
+        ui.phone.value = v;
+      });
+      refreshTotals();
+
+      return new Promise(resolve => {
+        const close = (payload) => { backdrop.remove(); resolve(payload); };
+        backdrop.querySelector('#modalClose').onclick = () => close(null);
+        backdrop.querySelector('#modalCancel').onclick = () => close(null);
+        backdrop.addEventListener('click', (e) => { if(e.target===backdrop) close(null); });
+        backdrop.querySelector('#modalConfirm').onclick = () => {
+          const name = ui.name.value.trim();
+          const phone = ui.phone.value.replace(/\D+/g,'');
+          const street = ui.street.value.trim();
+          const number = ui.number.value.trim();
+          const district = ui.district.value;
+
+          if (!name) return showError('Informe seu nome completo');
+          if (phone.length !== 11) return showError('Telefone inválido');
+          if (!street) return showError('Informe o endereço');
+          if (!district) return showError('Selecione o bairro');
+
+          localStorage.setItem('customer_name', name);
+          localStorage.setItem('customer_phone', phone);
+          localStorage.setItem('customer_street', street);
+          localStorage.setItem('customer_number', number);
+          localStorage.setItem('customer_district', district);
+          localStorage.setItem('payment_method_id', ui.payment.value);
+
+          const chosen = payOpts.find(p => p.id === ui.payment.value);
+          const payDisc = calcPayDiscount(cart.totals.subtotal, chosen?.discount);
+          const deliveryFee = Number(feeMap[district] || 0);
+
+          close({
+            name, phone, street, number, district,
+            payment: chosen,
+            paymentDiscountApplied: payDisc,
+            deliveryFee
+          });
+        };
+
+        function showError(msg){
+          ui.error.textContent = msg;
+          ui.error.style.display = 'block';
+          setTimeout(() => ui.error.style.display = 'none', 3500);
+        }
+      });
+    }
+
+    function calcPayDiscount(subtotal, discount){
+      if (!discount) return 0;
+      const v = Number(discount.value||0);
+      if (discount.type === 'percent') return +(subtotal * (v/100)).toFixed(2);
+      if (discount.type === 'fixed') return +v.toFixed(2);
+      return 0;
+    }
+
+    async function loadDistrictsAndFees(){
+      let list = [];
+      let fees = {};
+      for (const url of ['./bairros.json','../bairros.json']) {
+        try {
+          const r = await fetch(url, { cache:'no-store' });
+          if (!r.ok) continue;
+          const d = await r.json();
+          if (Array.isArray(d)) {
+            list = d.map(s => String(s).trim()).filter(Boolean);
+          } else if (d && typeof d === 'object') {
+            for (const [k,v] of Object.entries(d)) {
+              const name = String(k).trim();
+              if (name) {
+                list.push(name);
+                fees[name] = Number(v) || 0;
+              }
+            }
+          }
+          break;
+        } catch {}
+      }
+      list = Array.from(new Set(list)).sort((a,b)=> a.localeCompare(b,'pt-BR'));
+      return { list, fees };
+    }
+
+    async function loadOrEnsurePaymentOptions(){
+      try {
+        const { db, ready } = await import('./server.js');
+        await ready;
+        const ref = db.collection('data').doc('keys');
+        const snap = await ref.get();
+        const d = snap.exists ? snap.data() : {};
+        let arr = Array.isArray(d.paymentOptions) ? d.paymentOptions : [];
+        if (!arr.length) {
+          arr = [
+            { id:'pix', name:'Pix', discount:{ type:'percent', value:5 } },
+            { id:'debito', name:'Débito', discount:{ type:'percent', value:2 } },
+            { id:'credito', name:'Crédito', discount:{ type:'percent', value:0 } },
+            { id:'dinheiro', name:'Dinheiro', discount:{ type:'fixed', value:0 } },
+          ];
+          await ref.set({ paymentOptions: arr }, { merge:true });
+        }
+        return arr;
+      } catch {
+        return [
+          { id:'pix', name:'Pix', discount:{ type:'percent', value:5 } },
+          { id:'dinheiro', name:'Dinheiro', discount:{ type:'fixed', value:0 } }
+        ];
+      }
+    }
+
+    function loadCart(){
+      try{
+        const raw = localStorage.getItem(LS_CART);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      }catch{ return []; }
+    }
+
+    function saveCart(){
+      localStorage.setItem(LS_CART, JSON.stringify(cart));
+      localStorage.setItem(LS_CART_UPDATED, new Date().toISOString());
+      renderCart();
+    }
+
+    function fromProduct(p){
+      return {
+        id: productId(p),
+        name: p?.nome ?? '—',
+        code: p?.codigoBarras ?? null,
+        unitPrice: Number(productPrice(p) || 0),
+        qty: 1
+      };
+    }
+
+    function addToCart(item){
+      const idx = cart.findIndex(it => it.id === item.id);
+      if (idx >= 0) cart[idx].qty += item.qty;
+      else cart.push(item);
+      saveCart();
+      els.cartPanel.classList.add('open');
+    }
+
+    function incItem(id, d){
+      const it = cart.find(i => i.id === id);
+      if (!it) return;
+      it.qty = Math.max(1, it.qty + d);
+      saveCart();
+    }
+
+    function removeItem(id){
+      cart = cart.filter(i => i.id !== id);
+      saveCart();
+    }
+
+    function renderCart(){
+      const rows = cart.map(it => {
+        const total = it.unitPrice * it.qty;
+        return `
+          <div class="cartItem">
+            <div class="itemHeader">
+              <div>
+                <b>${it.name}</b>
+                <div class="itemMeta">${it.code ? '#'+it.code+' • ' : ''}${moneyBR(it.unitPrice)}/un</div>
+              </div>
+              <div class="itemPrice">${moneyBR(total)}</div>
+            </div>
+            <div class="itemControls">
+              <div class="qty">
+                <button data-act="dec" data-id="${it.id}">−</button>
+                <b>${it.qty}</b>
+                <button data-act="inc" data-id="${it.id}">＋</button>
+              </div>
+              <button class="btn-del" data-act="del" data-id="${it.id}">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      els.cartBody.innerHTML = rows || '<div class="empty"><div class="empty-icon">🛒</div><div>Carrinho vazio</div></div>';
+      const items = cart.reduce((s,i)=>s+i.qty,0);
+      const total = cart.reduce((s,i)=>s+i.qty*i.unitPrice,0);
+      els.cartItems.textContent = String(items);
+      els.cartTotal.textContent = moneyBR(total);
+      els.cartCount.textContent = String(items);
+      els.cartCount.style.display = items > 0 ? 'block' : 'none';
+    }
+  </script>
 </body>
 </html>
