@@ -1392,6 +1392,73 @@
       renderCart();
     }
 
+    async function showAlert(title, message, buttonText = 'OK'){
+      return new Promise(resolve => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML = `
+          <div class="modal" style="max-width:420px">
+            <div class="modal-header">
+              <div class="modal-title">${title}</div>
+            </div>
+            <div class="modal-body">
+              <p style="color:var(--gray-400);line-height:1.6">${message}</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn primary" id="btnOk" style="width:100%">${buttonText}</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(backdrop);
+        const close = () => { backdrop.remove(); resolve(); };
+        backdrop.querySelector('#btnOk').onclick = close;
+      });
+    }
+
+    async function showSuccess(title, message, buttonText = 'OK'){
+      return new Promise(resolve => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML = `
+          <div class="modal" style="max-width:420px">
+            <div class="modal-header">
+              <div class="modal-title">✅ ${title}</div>
+            </div>
+            <div class="modal-body">
+              <p style="color:var(--gray-400);line-height:1.6;text-align:center">${message}</p>
+            </div>
+            <div class="modal-footer">
+              <button class="btn primary" id="btnOk" style="width:100%">${buttonText}</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(backdrop);
+        const close = () => { backdrop.remove(); resolve(); };
+        backdrop.querySelector('#btnOk').onclick = close;
+      });
+    }
+
+    function showLoading(message = 'Carregando...'){
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      backdrop.innerHTML = `
+        <div class="modal" style="max-width:320px">
+          <div class="modal-body" style="text-align:center;padding:40px 24px">
+            <div class="loading" style="margin:0 auto 16px"></div>
+            <p style="color:var(--gray-400);margin:0">${message}</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+      return {
+        close: () => backdrop.remove(),
+        update: (msg) => {
+          const p = backdrop.querySelector('p');
+          if (p) p.textContent = msg;
+        }
+      };
+    }
+
     async function showConfirm(message, confirmText, cancelText){
       return new Promise(resolve => {
         const backdrop = document.createElement('div');
@@ -1402,7 +1469,7 @@
               <div class="modal-title">Confirmação</div>
             </div>
             <div class="modal-body">
-              <p style="color:var(--gray-400)">${message}</p>
+              <p style="color:var(--gray-400);line-height:1.6">${message}</p>
             </div>
             <div class="modal-footer">
               <button class="btn ghost" id="btnCancel">${cancelText}</button>
@@ -1420,7 +1487,7 @@
 
     async function doCheckout(){
       if (!cart.length) {
-        alert('Carrinho vazio.');
+        await showAlert('Carrinho vazio', 'Adicione produtos antes de finalizar o pedido.');
         return;
       }
 
@@ -1457,19 +1524,38 @@
         totals: { subtotal, discount: cartDisc, paymentDiscount: payDisc, deliveryFee, total }
       };
 
+      const loading = showLoading('Enviando seu pedido...');
+
       try{
         const { db, ready } = await import('./server.js');
         await ready;
         const ref = db.collection('orders').doc();
         await ref.set(order);
+        
+        localStorage.setItem('checkout_last_order_id', ref.id);
+        
         cart = [];
         saveCart();
         renderCart();
         els.cartPanel.classList.remove('open');
-        alert(`✅ Pedido enviado com sucesso!\n\nNúmero: ${ref.id}`);
+        
+        loading.close();
+        
+        await showSuccess(
+          'Pedido Enviado!',
+          `Seu pedido foi enviado com sucesso! Você será redirecionado para acompanhar o status.`,
+          'Acompanhar Pedido'
+        );
+        
+        window.location.href = `status.html?id=${ref.id}`;
       }catch(err){
+        loading.close();
         console.error('[checkout] erro:', err);
-        alert('❌ Erro ao enviar pedido. Tente novamente.');
+        await showAlert(
+          'Erro ao Enviar',
+          'Não foi possível enviar seu pedido. Verifique sua conexão e tente novamente.',
+          'Entendi'
+        );
       }
     }
 
