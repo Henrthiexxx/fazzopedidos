@@ -2,8 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes" />
   <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>Catálogo Premium</title>
   <style>
     :root{
@@ -25,13 +28,29 @@
     }
     
     *{box-sizing:border-box;margin:0;padding:0}
+    html{
+      -webkit-text-size-adjust:100%;
+      -webkit-tap-highlight-color:transparent;
+      touch-action:manipulation
+    }
     html,body{height:100%;overflow-x:hidden}
     body{
       font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;
       background:var(--black);
       color:var(--white);
       -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale
+      -moz-osx-font-smoothing:grayscale;
+      overscroll-behavior:none
+    }
+
+    /* Previne zoom em inputs no iOS */
+    input,select,textarea{
+      font-size:16px
+    }
+
+    /* Smooth scroll */
+    html{
+      scroll-behavior:smooth
     }
 
     /* Backdrop blur para iOS/Android style */
@@ -708,33 +727,329 @@
 
     /* Responsive */
     @media (max-width:768px){
+      /* Header Mobile */
       .topbar{
-        padding:12px 16px
+        padding:12px 16px;
+        flex-wrap:wrap;
+        gap:8px
+      }
+      .brand-section{
+        gap:8px
       }
       .brand-icon{
-        width:36px;
-        height:36px;
-        font-size:18px
-      }
-      .brand-title{
+        width:32px;
+        height:32px;
         font-size:16px
       }
+      .brand-title{
+        font-size:15px
+      }
+      .brand-subtitle{
+        font-size:10px
+      }
+      .status-badge{
+        order:3;
+        width:100%;
+        justify-content:center;
+        font-size:11px;
+        padding:4px 10px
+      }
+      .cartBtn{
+        padding:8px 16px;
+        font-size:13px
+      }
+      #cartCount{
+        padding:1px 6px;
+        font-size:11px
+      }
+
+      /* Layout Mobile */
       .layout{
-        padding:20px 16px 100px
+        padding:16px 12px 100px
       }
+
+      /* Search Mobile */
+      .search-section{
+        margin-bottom:24px
+      }
+      .search-wrapper{
+        border-radius:12px
+      }
+      .search-input{
+        padding:14px 14px 14px 44px;
+        font-size:15px
+      }
+      .search-icon{
+        left:14px;
+        font-size:16px
+      }
+      .search-meta{
+        margin-top:12px;
+        flex-direction:column;
+        align-items:flex-start;
+        gap:10px
+      }
+      .pills{
+        width:100%;
+        justify-content:space-between
+      }
+
+      /* Categories Mobile */
+      .cat{
+        margin-bottom:32px
+      }
+      .cat-header{
+        margin-bottom:16px
+      }
+      .cat-title{
+        font-size:18px
+      }
+      .cat-count{
+        padding:4px 10px;
+        font-size:11px
+      }
+
+      /* Grid Mobile */
       .grid{
-        grid-template-columns:1fr
+        grid-template-columns:1fr;
+        gap:12px
       }
+
+      /* Cards Mobile */
+      .card{
+        padding:16px;
+        border-radius:16px
+      }
+      .nm{
+        font-size:15px
+      }
+      .pr{
+        font-size:16px
+      }
+      .hint{
+        font-size:11px
+      }
+      .btnAdd{
+        padding:10px;
+        font-size:13px;
+        border-radius:10px
+      }
+
+      /* Cart Mobile */
       .cart{
-        width:100%
+        width:100%;
+        right:-100%
       }
-      .form-grid{
-        grid-template-columns:1fr
+      .cartHead{
+        padding:16px
+      }
+      .cartTitle{
+        font-size:18px
+      }
+      .iconBtn{
+        width:32px;
+        height:32px;
+        font-size:14px
+      }
+      .cartBody{
+        padding:12px
+      }
+      .cartItem{
+        padding:12px;
+        border-radius:12px
+      }
+      .itemHeader b{
+        font-size:14px
+      }
+      .itemMeta{
+        font-size:11px
+      }
+      .itemPrice{
+        font-size:14px
+      }
+      .qty{
+        padding:4px;
+        gap:8px
+      }
+      .qty button{
+        width:28px;
+        height:28px;
+        font-size:14px
+      }
+      .qty b{
+        font-size:14px
+      }
+      .cartFoot{
+        padding:16px
+      }
+      .summary{
+        gap:10px;
+        margin-bottom:16px
+      }
+      .line{
+        font-size:13px
+      }
+      .line.total{
+        font-size:18px;
+        padding-top:10px
+      }
+      .btn{
+        padding:12px;
+        font-size:14px
+      }
+
+      /* Modal Mobile */
+      .modal-backdrop{
+        padding:0;
+        align-items:flex-end
       }
       .modal{
         max-width:100%;
         border-radius:20px 20px 0 0;
-        align-self:flex-end
+        max-height:85vh;
+        animation:slideUp 0.3s forwards
+      }
+      @keyframes slideUp{
+        from{transform:translateY(100%)}
+        to{transform:translateY(0)}
+      }
+      .modal-header{
+        padding:16px
+      }
+      .modal-title{
+        font-size:18px
+      }
+      .modal-body{
+        padding:16px;
+        max-height:55vh
+      }
+      .modal-footer{
+        padding:16px;
+        flex-direction:column-reverse
+      }
+      .modal-footer .btn{
+        width:100%;
+        flex:1
+      }
+      
+      /* Form Mobile */
+      .form-grid{
+        grid-template-columns:1fr;
+        gap:16px
+      }
+      .form-label{
+        font-size:12px
+      }
+      .form-input,
+      .form-select{
+        padding:12px;
+        font-size:14px;
+        border-radius:10px
+      }
+      .form-badge{
+        font-size:10px;
+        padding:2px 6px
+      }
+      .modal-summary{
+        padding:12px;
+        border-radius:12px
+      }
+      .modal-summary .line{
+        padding:6px 0;
+        font-size:13px
+      }
+      .error-msg{
+        font-size:12px;
+        padding:10px
+      }
+
+      /* Footer Mobile */
+      .foot{
+        padding:10px 16px;
+        font-size:11px
+      }
+
+      /* Empty States Mobile */
+      .empty{
+        padding:60px 20px
+      }
+      .empty-icon{
+        font-size:48px
+      }
+    }
+
+    /* Extra Small Mobile */
+    @media (max-width:380px){
+      .topbar{
+        padding:10px 12px
+      }
+      .brand-title{
+        font-size:14px
+      }
+      .layout{
+        padding:12px 10px 100px
+      }
+      .search-input{
+        padding:12px 12px 12px 40px;
+        font-size:14px
+      }
+      .cat-title{
+        font-size:16px
+      }
+      .card{
+        padding:14px
+      }
+      .nm{
+        font-size:14px
+      }
+      .pr{
+        font-size:15px
+      }
+      .btnAdd{
+        padding:9px;
+        font-size:12px
+      }
+      .cartItem{
+        padding:10px
+      }
+      .modal-body{
+        padding:12px
+      }
+      .form-input,
+      .form-select{
+        padding:10px;
+        font-size:13px
+      }
+    }
+
+    /* Landscape Mobile */
+    @media (max-width:768px) and (orientation:landscape){
+      .layout{
+        padding-bottom:60px
+      }
+      .modal{
+        max-height:90vh
+      }
+      .modal-body{
+        max-height:65vh
+      }
+      .cartBody{
+        max-height:50vh
+      }
+    }
+
+    /* Touch Targets - Aumenta área de toque */
+    @media (hover: none) and (pointer: coarse){
+      .btnAdd,
+      .cartBtn,
+      .btn,
+      .iconBtn,
+      .qty button{
+        min-height:44px
+      }
+      .pill{
+        min-height:36px;
+        padding:8px 12px
       }
     }
   </style>
