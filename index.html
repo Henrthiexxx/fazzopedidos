@@ -3,80 +3,473 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>📦 Catálogo — Loja</title>
-  <link rel="stylesheet" href="./catalog.css">
-  <link rel="stylesheet" href="./users/checkout.css">
+  <title>📦 Catálogo de Produtos</title>
+  <style>
+    :root{
+      --primary:#10b981;
+      --primary-dark:#059669;
+      --bg:#ffffff;
+      --surface:#f8fafc;
+      --card:#ffffff;
+      --text:#0f172a;
+      --text-light:#64748b;
+      --border:#e2e8f0;
+      --shadow:0 1px 3px rgba(0,0,0,0.08);
+      --shadow-lg:0 10px 25px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;
+      background:var(--surface);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased
+    }
+    
+    /* Header fixo */
+    header{
+      position:sticky;
+      top:0;
+      background:var(--bg);
+      border-bottom:1px solid var(--border);
+      z-index:100;
+      box-shadow:var(--shadow)
+    }
+    .header-content{
+      max-width:1200px;
+      margin:0 auto;
+      padding:16px 20px
+    }
+    .brand{
+      font-size:24px;
+      font-weight:700;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:8px
+    }
+    .brand-icon{font-size:28px}
+    .status-bar{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-top:8px;
+      font-size:13px;
+      color:var(--text-light)
+    }
+    .status-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--primary);
+      animation:pulse 2s infinite
+    }
+    @keyframes pulse{
+      0%,100%{opacity:1}
+      50%{opacity:0.5}
+    }
 
+    /* Busca */
+    .search-container{
+      max-width:1200px;
+      margin:0 auto;
+      padding:20px 20px 0
+    }
+    .search-box{
+      position:relative;
+      background:var(--card);
+      border-radius:16px;
+      box-shadow:var(--shadow-lg);
+      overflow:hidden
+    }
+    .search-input{
+      width:100%;
+      padding:16px 20px 16px 50px;
+      font-size:16px;
+      border:2px solid var(--border);
+      border-radius:16px;
+      outline:none;
+      transition:border 0.2s
+    }
+    .search-input:focus{
+      border-color:var(--primary)
+    }
+    .search-icon{
+      position:absolute;
+      left:18px;
+      top:50%;
+      transform:translateY(-50%);
+      font-size:20px;
+      color:var(--text-light)
+    }
+    
+    /* Contador */
+    .count-badge{
+      margin:16px 0;
+      text-align:center;
+      font-size:14px;
+      color:var(--text-light);
+      font-weight:500
+    }
+
+    /* Lista de produtos */
+    main{
+      max-width:1200px;
+      margin:0 auto;
+      padding:0 20px 80px
+    }
+    
+    .category-section{
+      margin-bottom:32px
+    }
+    .category-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:16px;
+      padding:0 4px
+    }
+    .category-title{
+      font-size:20px;
+      font-weight:700;
+      color:var(--text)
+    }
+    .category-count{
+      background:var(--surface);
+      color:var(--text-light);
+      padding:4px 12px;
+      border-radius:12px;
+      font-size:13px;
+      font-weight:600
+    }
+
+    /* Cards de produtos */
+    .products-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+      gap:16px
+    }
+    .product-card{
+      background:var(--card);
+      border-radius:16px;
+      padding:16px;
+      box-shadow:var(--shadow);
+      border:1px solid var(--border);
+      transition:all 0.2s;
+      cursor:pointer
+    }
+    .product-card:hover{
+      transform:translateY(-2px);
+      box-shadow:var(--shadow-lg);
+      border-color:var(--primary)
+    }
+    .product-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      margin-bottom:8px
+    }
+    .product-name{
+      font-size:16px;
+      font-weight:600;
+      color:var(--text);
+      line-height:1.4;
+      flex:1;
+      margin-right:8px
+    }
+    .product-price{
+      font-size:18px;
+      font-weight:700;
+      color:var(--primary);
+      white-space:nowrap
+    }
+    .product-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px
+    }
+    .meta-tag{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      font-size:12px;
+      color:var(--text-light);
+      background:var(--surface);
+      padding:4px 10px;
+      border-radius:8px
+    }
+
+    /* Estado vazio */
+    .empty-state{
+      text-align:center;
+      padding:60px 20px;
+      color:var(--text-light)
+    }
+    .empty-icon{
+      font-size:64px;
+      margin-bottom:16px;
+      opacity:0.5
+    }
+    .empty-text{
+      font-size:16px;
+      font-weight:500
+    }
+
+    /* Footer */
+    footer{
+      position:fixed;
+      bottom:0;
+      left:0;
+      right:0;
+      background:var(--bg);
+      border-top:1px solid var(--border);
+      padding:12px 20px;
+      text-align:center;
+      font-size:12px;
+      color:var(--text-light);
+      box-shadow:0 -2px 10px rgba(0,0,0,0.05)
+    }
+
+    /* Responsivo */
+    @media (max-width:640px){
+      .products-grid{
+        grid-template-columns:1fr
+      }
+      .brand{font-size:20px}
+      .search-container{padding:16px 16px 0}
+      main{padding:0 16px 80px}
+    }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">Catálogo — <b>Produtos</b></div>
-    <div id="meta" class="sub">Conectando…</div>
-    <button id="toggleCart" class="cartBtn" aria-haspopup="dialog" aria-controls="cartPanel">
-      🛒 <span id="cartCount">0</span>
-    </button>
+  <header>
+    <div class="header-content">
+      <div class="brand">
+        <span class="brand-icon">🛒</span>
+        <span>Catálogo</span>
+      </div>
+      <div class="status-bar">
+        <span class="status-dot"></span>
+        <span id="meta">Conectando...</span>
+      </div>
+    </div>
   </header>
 
-  <main class="layout">
-    <section class="tools">
-      <label class="inp" title="Buscar por nome ou código">
-        🔎 <input id="q" placeholder="Buscar produto…" />
-      </label>
-      <div class="pills">
-        <button id="pillStock" class="pill" data-active="true" title="Ocultar sem estoque">Sem estoque oculto</button>
-        <button id="pillMin" class="pill" data-active="false" title="Ocultar min=0">min=0 visível</button>
-        <span class="pill muted" id="count">0 itens</span>
-      </div>
-    </section>
+  <div class="search-container">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input 
+        id="q" 
+        class="search-input" 
+        type="text" 
+        placeholder="Buscar produtos por nome ou código..."
+        autocomplete="off"
+      />
+    </div>
+    <div id="count" class="count-badge">0 produtos</div>
+  </div>
 
-    <section id="catalog" aria-live="polite"></section>
-    <div id="empty" class="empty" hidden>Nenhum produto encontrado com os filtros atuais.</div>
+  <main>
+    <div id="list"></div>
+    <div id="empty" class="empty-state" style="display:none">
+      <div class="empty-icon">📭</div>
+      <div class="empty-text">Nenhum produto encontrado</div>
+    </div>
   </main>
 
-  <!-- Cart drawer -->
-  <aside id="cartPanel" class="cart" role="dialog" aria-label="Carrinho" aria-modal="false">
-    <div class="cartHead">
-      <div class="cartTitle">Seu carrinho</div>
-      <button id="closeCart" class="iconBtn" title="Fechar">✕</button>
-    </div>
-    <div id="cartBody" class="cartBody"></div>
-    <div class="cartFoot">
-      <div class="line"><span>Itens:</span><b id="cartItems">0</b></div>
-      <div class="line big"><span>Total:</span><b id="cartTotal">R$ 0,00</b></div>
-      <div class="actions">
-        <button id="clearCart" class="btn ghost">Limpar</button>
-       <a id="checkoutLink" href="users/checkout.html" class="btn primary">Finalizar</a>
+  <footer>
+    <span id="ts">—</span>
+  </footer>
 
-      </div>
-    </div>
-  </aside>
-
-  <footer class="foot"><span id="ts">—</span></footer>
-
-  <!-- App -->
-  <script type="module" src="./catalog.js" defer></script>
-<script type="module">
-  import { createOrderWithCheckout } from './users/checkout.js';
-
-  // Exemplo: adapte para o seu objeto de carrinho real
-  // Precisa ter: items[] e totals{ subtotal, discount, total }
-  function getCartSnapshot(){
-    const raw = localStorage.getItem('cart_data'); // ou de onde você guarda
-    const obj = raw ? JSON.parse(raw) : { items:[], totals:{subtotal:0, discount:0, total:0} };
-    return obj;
-  }
-
-  document.getElementById('btnCheckout').addEventListener('click', async () => {
-    const cart = getCartSnapshot();
-    const res = await createOrderWithCheckout(cart);
-    if (res?.id) {
-      // opcional: limpar carrinho
-      // localStorage.removeItem('cart_data');
-      alert(`Pedido enviado! #${res.id}`);
-      // redirecionar ou mostrar confirmação
+  <script type="module">
+    // Importa db do seu server.js
+    let db;
+    try { ({ db } = await import('./server.js')); }
+    catch (e1) {
+      try { ({ db } = await import('../server.js')); }
+      catch (e2) {
+        document.getElementById('meta').textContent = 'Erro ao conectar';
+        throw e2;
+      }
     }
-  });
-</script>
 
+    const $ = (s)=>document.querySelector(s);
+    const moneyBR = (n)=> Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+    const collator = new Intl.Collator('pt-BR', { sensitivity:'base', numeric:true });
+
+    const listEl = $('#list'), metaEl = $('#meta'), countEl = $('#count');
+    const tsEl = $('#ts'), emptyEl = $('#empty'), qEl = $('#q');
+
+    const LS_VIEW  = 'produtos_view';
+    const FIELDRAW = 'produtos';
+
+    const params = new URLSearchParams(location.search);
+    const qsStock = params.get('stock');
+    const FILTERS = {
+      hideNoStock: qsStock === null ? true : qsStock === '1',
+      hideMinZero: params.get('min') === '1',
+    };
+
+    let all = [];
+    let unsub = null;
+
+    function normalize(raw){
+      if (raw == null) return [];
+      let x = raw;
+      if (typeof x === 'string') {
+        const s = x.trim();
+        try { x = JSON.parse(s); }
+        catch { try { x = JSON.parse('['+s.replace(/}\s*[\n,]?\s*\{/g,'},{')+']'); } catch { return []; } }
+      }
+      let arr = Array.isArray(x) ? x : (x && typeof x === 'object' ? Object.values(x) : []);
+      return arr.map(it => typeof it==='string' ? (()=>{try{return JSON.parse(it)}catch{return null}})() : it).filter(Boolean);
+    }
+
+    function isActive(p){
+      if(!p) return false;
+      if (p.ativo === false || p.ativo === 0 || p.ativo === 'false' || p.ativo === '0') return false;
+      if ('status' in p) {
+        const s = String(p.status).toLowerCase();
+        if (['inativo','inactive','off','0','false'].includes(s)) return false;
+      }
+      return true;
+    }
+
+    function minVal(p){ const n = Number(p?.min); return Number.isFinite(n) ? n : null; }
+    function stockVal(p){
+      const names = ['estoque','qtd','quantidade','saldo','qtdEstoque','estoqueAtual','stock'];
+      for (const k of names) {
+        const v = p?.[k];
+        const n = Number(v);
+        if (Number.isFinite(n)) return n;
+      }
+      return null;
+    }
+
+    function buildLocalView(rawArray, { hideMinZero=false, hideNoStock=true } = {}){
+      let out = normalize(rawArray).filter(isActive);
+      if (hideMinZero) out = out.filter(p => minVal(p) !== 0);
+      if (hideNoStock) out = out.filter(p => {
+        const s = stockVal(p);
+        return s === null ? true : s > 0;
+      });
+      out.sort((a,b)=> collator.compare(a?.nome?.toString?.()||'', b?.nome?.toString?.()||''));
+      return out;
+    }
+
+    function groupByCategoria(arr){
+      const groups = new Map();
+      for (const p of arr) {
+        let c = (p?.categoria ?? '').toString().trim();
+        if (!c) c = 'Sem categoria';
+        if (!groups.has(c)) groups.set(c, []);
+        groups.get(c).push(p);
+      }
+      const orderedCats = Array.from(groups.keys()).sort((a,b)=> collator.compare(a,b));
+      const result = orderedCats.map(cat => ({
+        cat,
+        items: groups.get(cat).slice().sort((a,b)=> collator.compare(a?.nome?.toString?.()||'', b?.nome?.toString?.()||'')),
+      }));
+      return result;
+    }
+
+    function render(filter=""){
+      const q = (filter||"").toLowerCase();
+      const filtered = all.filter(p =>
+        !q ||
+        (p.nome||'').toLowerCase().includes(q) ||
+        (p.codigoBarras||'').toLowerCase().includes(q)
+      );
+
+      const grouped = groupByCategoria(filtered);
+      let totalShown = 0;
+      
+      const html = grouped.map(g => {
+        if (!g.items.length) return '';
+        totalShown += g.items.length;
+        
+        const cards = g.items.map(p => `
+          <div class="product-card">
+            <div class="product-header">
+              <div class="product-name">${p.nome || '—'}</div>
+              <div class="product-price">${moneyBR(+p.precoVenda||0)}</div>
+            </div>
+            ${p.codigoBarras || p.categoria ? `
+              <div class="product-meta">
+                ${p.codigoBarras ? `<span class="meta-tag">📦 ${p.codigoBarras}</span>` : ''}
+                ${p.categoria ? `<span class="meta-tag">🏷️ ${p.categoria}</span>` : ''}
+              </div>
+            ` : ''}
+          </div>
+        `).join('');
+
+        return `
+          <section class="category-section">
+            <div class="category-header">
+              <h2 class="category-title">${g.cat}</h2>
+              <span class="category-count">${g.items.length}</span>
+            </div>
+            <div class="products-grid">${cards}</div>
+          </section>
+        `;
+      }).join('');
+
+      listEl.innerHTML = html;
+      countEl.textContent = `${totalShown} produto${totalShown===1?'':'s'}`;
+      emptyEl.style.display = totalShown ? 'none' : 'block';
+    }
+
+    function updateMeta(localCount, srcTotal, online){
+      const dt = new Date();
+      metaEl.textContent = online ? 'Online' : 'Offline';
+      tsEl.textContent = `Atualizado ${dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`;
+    }
+
+    function loadFromLocal(){
+      try{
+        const raw = localStorage.getItem(LS_VIEW) || '[]';
+        const arr = JSON.parse(raw);
+        all = Array.isArray(arr) ? arr : [];
+        render(qEl.value);
+        updateMeta(all.length, all.length, false);
+      }catch{}
+    }
+
+    const ref = db.collection('data').doc('keys');
+
+    (async () => {
+      try {
+        const snap = await ref.get();
+        const d = snap.exists ? snap.data() : {};
+        const src = d[FIELDRAW];
+        const totalSrc = normalize(src).length;
+        const view = buildLocalView(src, FILTERS);
+        localStorage.setItem(LS_VIEW, JSON.stringify(view));
+        all = view;
+        render(qEl.value);
+        updateMeta(view.length, totalSrc, true);
+      } catch (err) {
+        console.error('[catalogo] erro na carga inicial', err);
+        loadFromLocal();
+      }
+
+      unsub = ref.onSnapshot(doc => {
+        const d = doc.exists ? doc.data() : {};
+        const src = d[FIELDRAW];
+        const totalSrc = normalize(src).length;
+        const view = buildLocalView(src, FILTERS);
+        localStorage.setItem(LS_VIEW, JSON.stringify(view));
+        all = view;
+        render(qEl.value);
+        updateMeta(view.length, totalSrc, true);
+      }, err => {
+        console.error('[catalogo] erro no listener', err);
+        metaEl.textContent = 'Erro de conexão';
+      });
+    })();
+
+    qEl.addEventListener('input', ()=>render(qEl.value));
+    window.addEventListener('beforeunload', ()=>{ try{unsub && unsub();}catch{} });
+  </script>
 </body>
 </html>
