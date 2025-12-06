@@ -1,4 +1,97 @@
 // catalog.js — Catálogo interativo + carrinho (client-only)
+// ui-premium.js (inline no catalog.js)
+
+// ========== TOAST ==========
+function uiToast(msg, type="info", ms=3000){
+  // cria wrap se preciso
+  let wrap = document.getElementById("toastWrap");
+  if (!wrap) {
+    wrap = document.createElement("div");
+    wrap.id = "toastWrap";
+    wrap.style.position = "fixed";
+    wrap.style.right = "16px";
+    wrap.style.bottom = "76px";
+    wrap.style.display = "flex";
+    wrap.style.flexDirection = "column";
+    wrap.style.gap = "8px";
+    wrap.style.zIndex = "10000";
+    document.body.appendChild(wrap);
+  }
+
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.style.minWidth = "260px";
+  el.style.maxWidth = "380px";
+  el.style.background = type==="ok" ? "#065f46" : type==="warn" ? "#7c2d12" : "#1e293b";
+  el.style.color = "#e2e8f0";
+  el.style.borderRadius = "10px";
+  el.style.boxShadow = "0 6px 20px rgba(0,0,0,.25)";
+  el.style.padding = "10px 12px";
+  el.style.fontSize = "14px";
+  el.style.display = "flex";
+  el.style.justifyContent = "space-between";
+  el.style.alignItems = "center";
+  el.style.opacity = ".98";
+  el.innerHTML = `<div>${msg}</div><button aria-label="Fechar" style="background:transparent;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;margin-left:8px">×</button>`;
+  el.querySelector("button").onclick = () => el.remove();
+  wrap.appendChild(el);
+  setTimeout(()=> el.remove(), ms);
+}
+
+// ========== MODAL ==========
+function uiModal({ title="Título", body="", actions=[] }){
+  // backdrop + caixa no padrão Premium (.modal-backdrop / .modal / .modal-header / .modal-body / .modal-footer)
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.setAttribute("role","dialog");
+  backdrop.setAttribute("aria-modal","true");
+  backdrop.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">${title}</div>
+        <button id="uiModalClose" class="iconBtn" style="width:auto;height:auto;border-radius:12px;padding:6px 10px">✕</button>
+      </div>
+      <div class="modal-body">${body}</div>
+      <div class="modal-footer"></div>
+    </div>
+  `;
+  const foot = backdrop.querySelector(".modal-footer");
+  actions.forEach(a=>{
+    const b = document.createElement("button");
+    b.className = "btn " + (a.cls || "ghost");
+    b.textContent = a.label || "OK";
+    b.onclick = a.onClick || (()=> close());
+    foot.appendChild(b);
+  });
+  function close(){ backdrop.remove(); }
+  backdrop.querySelector("#uiModalClose").onclick = close;
+  backdrop.addEventListener("click", (e)=>{ if(e.target===backdrop) close(); });
+  document.body.appendChild(backdrop);
+  return { close, root: backdrop, setError(msg){
+    let err = backdrop.querySelector(".error-msg");
+    if (!err){
+      err = document.createElement("div");
+      err.className = "error-msg";
+      backdrop.querySelector(".modal-body").appendChild(err);
+    }
+    err.textContent = msg || "";
+  }};
+}
+
+// ========== CONFIRM PREMIUM (substitui window.confirm) ==========
+function uiConfirm({ title="Confirmação", message="Deseja continuar?", confirmText="Confirmar", cancelText="Cancelar" }){
+  return new Promise(resolve=>{
+    const { close, root } = uiModal({
+      title,
+      body: `<div class="form-hint" style="margin-top:-8px">${message}</div>`,
+      actions: [
+        { label: cancelText, cls: "ghost", onClick: ()=>{ close(); resolve(false); } },
+        { label: confirmText, cls: "primary", onClick: ()=>{ close(); resolve(true); } }
+      ]
+    });
+  });
+}
+
 
 const moneyBR = (n)=> Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const collator = new Intl.Collator('pt-BR', { sensitivity:'base', numeric:true });
