@@ -1,9 +1,8 @@
 // catalog.js — Catálogo interativo + carrinho (client-only)
-// ui-premium.js (inline no catalog.js)
+// Atualizado para suportar novo sistema de categorias por ID
 
 // ========== TOAST ==========
 function uiToast(msg, type="info", ms=3000){
-  // cria wrap se preciso
   let wrap = document.getElementById("toastWrap");
   if (!wrap) {
     wrap = document.createElement("div");
@@ -40,7 +39,6 @@ function uiToast(msg, type="info", ms=3000){
 
 // ========== MODAL ==========
 function uiModal({ title="Título", body="", actions=[] }){
-  // backdrop + caixa no padrão Premium (.modal-backdrop / .modal / .modal-header / .modal-body / .modal-footer)
   const backdrop = document.createElement("div");
   backdrop.className = "modal-backdrop";
   backdrop.setAttribute("role","dialog");
@@ -78,7 +76,7 @@ function uiModal({ title="Título", body="", actions=[] }){
   }};
 }
 
-// ========== CONFIRM PREMIUM (substitui window.confirm) ==========
+// ========== CONFIRM PREMIUM ==========
 function uiConfirm({ title="Confirmação", message="Deseja continuar?", confirmText="Confirmar", cancelText="Cancelar" }){
   return new Promise(resolve=>{
     const { close, root } = uiModal({
@@ -92,14 +90,14 @@ function uiConfirm({ title="Confirmação", message="Deseja continuar?", confirm
   });
 }
 
-
 const moneyBR = (n)=> Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const collator = new Intl.Collator('pt-BR', { sensitivity:'base', numeric:true });
 
-// 🔑 localStorage keys (em inglês)
+// 🔑 localStorage keys
 const LS_PRODUCTS_VIEW = 'catalog_products_view';
 const LS_CART          = 'catalog_cart';
 const LS_CART_UPDATED  = 'catalog_cart_updated_at';
+const LS_CATEGORIAS    = 'categorias';
 
 // refs UI
 const els = {
@@ -122,9 +120,9 @@ const els = {
   cartCount:document.getElementById('cartCount'),
 };
 
-// filtros: estoque oculto por padrão; min=0 opcional via querystring (?min=1)
+// filtros
 const params = new URLSearchParams(location.search);
-const qsStock = params.get('stock'); // null|0|1
+const qsStock = params.get('stock');
 const FILTERS = {
   hideNoStock: qsStock === null ? true : qsStock === '1',
   hideMinZero: params.get('min') === '1',
@@ -132,10 +130,85 @@ const FILTERS = {
 
 // estados
 let db, unsub = null;
-let rawSrc = [];      // <- bruto do Firestore (fonte da verdade para reprocessar filtros)
-let all = [];         // view local filtrada
+let rawSrc = [];
+let all = [];
 let indexById = new Map();
 let cart = loadCart();
+let categoriasMap = new Map(); // Mapa de categorias por ID
+
+// ================== CATEGORIAS ==================
+function loadCategorias() {
+  try {
+    const raw = localStorage.getItem(LS_CATEGORIAS);
+    const arr = raw ? JSON.parse(raw) : [];
+    categoriasMap.clear();
+    for (const c of arr) {
+      if (c && c.id) {
+        categoriasMap.set(c.id, c);
+      }
+    }
+    return arr;
+  } catch {
+    return [];
+  }
+}
+
+function getCategoriaById(id) {
+  return categoriasMap.get(id) || null;
+}
+
+/**
+ * Obtém o nome da categoria de um produto
+ * Suporta múltiplos formatos:
+ * - categoriaId (novo formato) -> busca no mapa de categorias
+ * - categoria (string legado) -> usa diretamente
+ */
+function getCategoriaNome(produto) {
+  if (!produto) return '';
+  
+  // Novo formato: categoriaId
+  if (produto.categoriaId) {
+    const cat = getCategoriaById(produto.categoriaId);
+    if (cat) {
+      // Monta caminho completo se tiver hierarquia
+      const path = [];
+      let current = cat;
+      while (current) {
+        path.unshift(current.nome);
+        current = current.parentId ? getCategoriaById(current.parentId) : null;
+      }
+      return path.join(' / ');
+    }
+  }
+  
+  // Formato legado: categoria como string
+  if (produto.categoria && typeof produto.categoria === 'string') {
+    return produto.categoria;
+  }
+  
+  // Fallback
+  return '';
+}
+
+/**
+ * Obtém apenas o nome da categoria folha (sem hierarquia)
+ */
+function getCategoriaLeaf(produto) {
+  if (!produto) return '';
+  
+  if (produto.categoriaId) {
+    const cat = getCategoriaById(produto.categoriaId);
+    if (cat) return cat.nome;
+  }
+  
+  if (produto.categoria && typeof produto.categoria === 'string') {
+    // Se for formato "Pai / Filho", pega o último
+    const parts = produto.categoria.split('/').map(s => s.trim());
+    return parts[parts.length - 1] || produto.categoria;
+  }
+  
+  return '';
+}
 
 // ================== UI BIND FIRST ==================
 wireUI();
@@ -144,12 +217,12 @@ console.log('[catalog] UI wired');
 // ================== BOOTSTRAP (async) ==============
 (async function bootstrap(){
   try{
+    loadCategorias(); // Carrega categorias do localStorage primeiro
     await initFirebase();
     await firstLoad();
     setupRealtime();
   }catch(e){
     console.error('[catalog] bootstrap error', e);
-    // tenta cache local
     loadFromLocal();
   }
 })();
@@ -158,7 +231,6 @@ console.log('[catalog] UI wired');
 async function initFirebase(){
   const mod = await import('./server.js');
   db = mod.db;
-  // se server.js exportar ready, aguarda (útil se rules exigirem auth)
   try { if (mod.ready) await mod.ready; } catch {}
   console.log('[catalog] firebase ready');
 }
@@ -184,7 +256,9 @@ function isActive(p){
   }
   return true;
 }
+
 function minVal(p){ const n = Number(p?.min); return Number.isFinite(n) ? n : null; }
+
 function stockVal(p){
   const names = ['estoque','qtd','quantidade','saldo','qtdEstoque','estoqueAtual','stock'];
   for (const k of names) {
@@ -194,6 +268,7 @@ function stockVal(p){
   }
   return null;
 }
+
 function productPrice(p){
   const cand = ['precoVenda','preco','price','valor','valorVenda','unitPrice'];
   for (const k of cand) {
@@ -202,11 +277,11 @@ function productPrice(p){
   }
   return 0;
 }
+
 function productId(p){
   const base = p?.id ?? p?.codigoBarras ?? `${p?.nome || 'item'}|${productPrice(p)}`;
-  return String(base); // <- força string e preserva zeros à esquerda
+  return String(base);
 }
-
 
 function buildLocalView(raw){
   let out = normalize(raw).filter(isActive);
@@ -216,7 +291,7 @@ function buildLocalView(raw){
     return s === null ? true : s > 0;
   });
   indexById = new Map();
-for (const p of out) indexById.set(productId(p), p); // <- usa productId(p) (string) como chave
+  for (const p of out) indexById.set(productId(p), p);
   out.sort((a,b)=> collator.compare(a?.nome?.toString?.()||'', b?.nome?.toString?.()||''));
   return out;
 }
@@ -224,7 +299,8 @@ for (const p of out) indexById.set(productId(p), p); // <- usa productId(p) (str
 function groupByCategory(arr){
   const map = new Map();
   for (const p of arr) {
-    let c = (p?.categoria ?? '').toString().trim();
+    // Usa a nova função que suporta ambos os formatos
+    let c = getCategoriaLeaf(p);
     if (!c) c = 'Sem categoria';
     if (!map.has(c)) map.set(c, []);
     map.get(c).push(p);
@@ -241,7 +317,8 @@ function render(filterText=""){
   const filtered = all.filter(p =>
     !q ||
     (p.nome||'').toLowerCase().includes(q) ||
-    (p.codigoBarras||'').toLowerCase().includes(q)
+    (p.codigoBarras||'').toLowerCase().includes(q) ||
+    getCategoriaNome(p).toLowerCase().includes(q) // Busca também na categoria
   );
   const groups = groupByCategory(filtered);
 
@@ -251,13 +328,14 @@ function render(filterText=""){
     totalShown += g.items.length;
     const cards = g.items.map(p => {
       const id = productId(p);
+      const catNome = getCategoriaLeaf(p);
       return `
         <div class="card" data-id="${id}">
           <div>
             <div class="nm">${p.nome || '—'}</div>
             <div class="hint">
               ${p.codigoBarras ? '#'+p.codigoBarras : ''}
-              ${p.categoria ? ' • '+p.categoria : ''}
+              ${catNome ? ' • '+catNome : ''}
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px">
@@ -298,6 +376,13 @@ async function firstLoad(){
   const ref = db.collection('data').doc('keys');
   const snap = await ref.get();
   const d = snap.exists ? snap.data() : {};
+  
+  // Carrega categorias do Firestore se disponível
+  if (d.categorias && Array.isArray(d.categorias)) {
+    localStorage.setItem(LS_CATEGORIAS, JSON.stringify(d.categorias));
+    loadCategorias();
+  }
+  
   rawSrc = d.produtos || [];
   const view = buildLocalView(rawSrc);
   localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
@@ -310,6 +395,13 @@ function setupRealtime(){
   const ref = db.collection('data').doc('keys');
   unsub = ref.onSnapshot(doc => {
     const d = doc.exists ? doc.data() : {};
+    
+    // Atualiza categorias em tempo real também
+    if (d.categorias && Array.isArray(d.categorias)) {
+      localStorage.setItem(LS_CATEGORIAS, JSON.stringify(d.categorias));
+      loadCategorias();
+    }
+    
     rawSrc = d.produtos || [];
     const view = buildLocalView(rawSrc);
     localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
@@ -323,6 +415,7 @@ function setupRealtime(){
 }
 
 function loadFromLocal(){
+  loadCategorias(); // Carrega categorias locais
   try{
     const local = JSON.parse(localStorage.getItem(LS_PRODUCTS_VIEW) || '[]');
     all = Array.isArray(local) ? local : [];
@@ -332,11 +425,9 @@ function loadFromLocal(){
 }
 
 // ======= UI wiring & Cart =======
-
 function wireUI(){
   els.q?.addEventListener('input', () => render(els.q.value));
 
-  // toggles de filtro — reprocessa SEMPRE a partir do bruto
   els.pillStock?.addEventListener('click', () => {
     FILTERS.hideNoStock = !FILTERS.hideNoStock;
     updatePillsUI();
@@ -344,6 +435,7 @@ function wireUI(){
     localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(all));
     render(els.q?.value || '');
   });
+  
   els.pillMin?.addEventListener('click', () => {
     FILTERS.hideMinZero = !FILTERS.hideMinZero;
     updatePillsUI();
@@ -352,11 +444,9 @@ function wireUI(){
     render(els.q?.value || '');
   });
 
-  // abrir/fechar carrinho
   els.cartBtn?.addEventListener('click', () => els.cartPanel?.classList.add('open'));
   els.closeCart?.addEventListener('click', () => els.cartPanel?.classList.remove('open'));
 
-  // delegação para "Adicionar"
   els.catalog?.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-add]');
     if (!btn) return;
@@ -366,7 +456,6 @@ function wireUI(){
     addToCart(fromProduct(p));
   });
 
-  // ações do carrinho
   els.cartBody?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-act]');
     if (!btn) return;
@@ -378,33 +467,30 @@ function wireUI(){
 
   els.clearCart?.addEventListener('click', clearCart);
 
-  // ===== Checkout =====
+  // Checkout
   const LS_CHECKOUT_LAST  = 'checkout_last_order_id';
   const LS_CHECKOUT_QUEUE = 'checkout_pending';
 
-  // handler direto (se o botão existir já no DOM)
   els.checkout?.addEventListener('click', (e) => {
-    e.preventDefault();                // evita submit nativo
+    e.preventDefault();
     e.stopPropagation();
     doCheckout();
   });
 
-  // fallback delegado (se o botão for inserido depois)
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('#checkout');
     if (!btn) return;
-    e.preventDefault();                // evita submit nativo
+    e.preventDefault();
     e.stopPropagation();
     doCheckout();
   });
 
   window.addEventListener('online', tryFlushQueue);
 
-  // primeira render do carrinho e estado dos "pills"
   updatePillsUI();
   renderCart();
 
-  // ==== helpers internos do checkout (iguais aos seus) ====
+  // Checkout helpers
   function cartSnapshot(){
     const items = cart.map(it => ({
       id: it.id,
@@ -415,7 +501,7 @@ function wireUI(){
       lineTotal: +Number((it.unitPrice || 0) * (it.qty || 1)).toFixed(2),
     }));
     const subtotal = +items.reduce((s,i)=>s+i.lineTotal,0).toFixed(2);
-    const discount = +Number(0).toFixed(2); // ajuste se tiver regras
+    const discount = +Number(0).toFixed(2);
     const total = +(subtotal - discount).toFixed(2);
     return { items, totals:{ subtotal, discount, total } };
   }
@@ -423,12 +509,10 @@ function wireUI(){
   async function doCheckout(){
     if (!cart.length) { alert('Carrinho vazio.'); return; }
 
-    // 1) abre modal e obtém dados do cliente + pagamento (com desconto)
     const snap = cartSnapshot();
     const form = await openCheckoutModal(snap);
-    if (!form) return; // cancelado
+    if (!form) return;
 
-    // 2) monta pedido final (não acumula descontos)
     const subtotal = snap.totals.subtotal;
     const cartDisc = snap.totals.discount;
     const payDisc  = form.paymentDiscountApplied || 0;
@@ -459,7 +543,6 @@ function wireUI(){
     try{
       const { ready } = await import('./server.js'); await ready;
 
-      // se tiver CF createOrder:
       const fnOk = !!(window.firebase?.functions);
       if (fnOk) {
         const callable = firebase.app().functions('us-central1').httpsCallable('createOrder');
@@ -483,7 +566,6 @@ function wireUI(){
         }
       }
 
-      // fallback: Firestore direto
       const { db } = await import('./server.js');
       const ref = db.collection('orders').doc();
       await ref.set(order);
@@ -491,7 +573,6 @@ function wireUI(){
       cart = []; saveCart(); renderCart();
       alert(`Pedido enviado!\nNúmero: ${ref.id}`);
     }catch(err){
-      // offline: enfileira
       enqueuePending(order);
       alert('Sem internet. O pedido foi guardado e será enviado quando a conexão voltar.');
       console.warn('[checkout] enfileirado (offline)', err);
@@ -521,7 +602,7 @@ function wireUI(){
     }
   }
 
-  // ==== utilitários do modal (iguais aos seus) ====
+  // Modal helpers
   function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
   function cleanPhone(s){ return String(s||'').replace(/\D+/g,'').slice(0,11); }
   function isValidPhone(d){ return /^\d{11}$/.test(d); }
@@ -533,443 +614,216 @@ function wireUI(){
     return 0;
   }
 
-async function openCheckoutModal(cart){
-  const ui = buildCkUI();
-  document.body.appendChild(ui.wrap);
-  const ls = (k,d='')=>{ try{return localStorage.getItem(k)??d}catch{return d} };
+  async function openCheckoutModal(cart){
+    const ui = buildCkUI();
+    document.body.appendChild(ui.wrap);
+    const ls = (k,d='')=>{ try{return localStorage.getItem(k)??d}catch{return d} };
 
-  // Prefill
-  ui.name.value    = ls('customer_name');
-  ui.phone.value   = ls('customer_phone');
-  ui.street.value  = ls('customer_street');
-  ui.number.value  = ls('customer_number');
+    ui.name.value    = ls('customer_name');
+    ui.phone.value   = ls('customer_phone');
+    ui.street.value  = ls('customer_street');
+    ui.number.value  = ls('customer_number');
 
-  ui.totalBase.textContent = moneyBR(cart.totals.subtotal);
-  ui.warnNoAcc.hidden = !(cart.totals.discount > 0);
+    ui.totalBase.textContent = moneyBR(cart.totals.subtotal);
+    ui.warnNoAcc.hidden = !(cart.totals.discount > 0);
 
-// ===== Bairros + Taxas (corrigido) =====
-const { list: districts, fees: feeMap } = await loadDistrictsAndFees();
-const lastDistrict = ls('customer_district');
+    const { list: districts, fees: feeMap } = await loadDistrictsAndFees();
+    const lastDistrict = ls('customer_district');
 
-ui.district.innerHTML = '<option value="">Selecione…</option>';
-{
-  const frag = document.createDocumentFragment();
-  for (const name of districts) {
-    const fee = Number(feeMap[name] || 0);
-    const opt = document.createElement('option');
-    opt.value = name;                          // <-- value é SEMPRE o nome
-    opt.dataset.fee = String(fee);             // <-- taxa guardada no data-fee
-    opt.textContent = fee ? `${name} — ${moneyBR(fee)}` : name; // rótulo bonito
-    if (name === lastDistrict) opt.selected = true;
-    frag.appendChild(opt);
-  }
-  ui.district.appendChild(frag);
-}
-
-// ===== Recalcular totais somando a entrega =====
-const refreshTotals = ()=>{
-  const subtotal = cart.totals.subtotal;
-  const cartDisc = cart.totals.discount;
-
-  const chosen = payOpts.find(p=>p.id===ui.payment.value);
-  const payDisc = calcPayDiscount(subtotal, chosen?.discount);
-  const applyPayment = !(cartDisc > 0);
-
-  const sel = ui.district.options[ui.district.selectedIndex];
-  const shipFee = Number(sel?.dataset?.fee || 0);  // <-- lê do data-fee
-
-  const descontoAplicado = applyPayment ? payDisc : cartDisc;
-  const total = Math.max(0, subtotal - descontoAplicado) + shipFee;
-
-  ui.totalDisc.textContent  = moneyBR(descontoAplicado);
-  if (ui.totalShip) ui.totalShip.textContent = moneyBR(shipFee); // opcional se existir linha de frete
-  ui.totalFinal.textContent = moneyBR(total);
-};
-
-ui.payment.addEventListener('change', refreshTotals);
-ui.district.addEventListener('change', refreshTotals);
-refreshTotals();
-
-  // Pagamentos
-  const payOpts = await loadOrEnsurePaymentOptions();
-  ui.payment.innerHTML = payOpts.map(p=>{
-    const label = p.discount?.type==='percent'
-      ? `${p.name} — ${p.discount.value}% off`
-      : `${p.name}${p.discount?.value?` — ${moneyBR(p.discount.value)} off`:''}`;
-    const sel = (ls('payment_method_id')===p.id)?' selected':'';
-    return `<option value="${escapeHTML(p.id)}"${sel}>${escapeHTML(label)}</option>`;
-  }).join('');
-
-  // Máscara telefone
-  ui.phone.addEventListener('input', ()=>{
-    const d = cleanPhone(ui.phone.value);
-    let v = d; if (v.length>0) v='('+v;
-    if (v.length>3) v=v.slice(0,3)+') '+v.slice(3);
-    if (v.length>6) v=v.slice(0,6)+' '+v.slice(6);
-    if (v.length>11) v=v.slice(0,11)+' '+v.slice(11);
-    ui.phone.value = v.slice(0,18);
-  });
-
-
-  ui.payment.addEventListener('change', refreshTotals);
-  ui.district.addEventListener('change', refreshTotals);
-  refreshTotals();
-
-  // Promise de retorno
-  const result = await new Promise((resolve)=>{
-    const done = (payload)=>{ ui.wrap.remove(); resolve(payload); };
-    ui.close.addEventListener('click', ()=>done(null));
-    ui.back .addEventListener('click', ()=>done(null));
-    ui.confirm.addEventListener('click', ()=>{
-      const name = ui.name.value.trim();
-      const phone = cleanPhone(ui.phone.value);
-      const street = ui.street.value.trim();
-      const number = ui.number.value.trim();
-      const district = ui.district.value;
-      if (!name)   return showCkErr('Informe o nome.');
-      if (!isValidPhone(phone)) return showCkErr('Telefone inválido. Use (99) 9 9999 9999.');
-      if (!street) return showCkErr('Informe a rua/avenida.');
-      if (!district) return showCkErr('Selecione o bairro.');
-
-      // Salva LS
-      try{
-        localStorage.setItem('customer_name', name);
-        localStorage.setItem('customer_phone', phone);
-        localStorage.setItem('customer_street', street);
-        localStorage.setItem('customer_number', number);
-        localStorage.setItem('customer_district', district);
-        localStorage.setItem('payment_method_id', ui.payment.value);
-      }catch{}
-
-      const chosen = payOpts.find(p=>p.id===ui.payment.value) || null;
-      const payDisc = calcPayDiscount(cart.totals.subtotal, chosen?.discount);
-      const applyPayment = !(cart.totals.discount > 0);
-      const deliveryFee = Number(feeMap[district] || 0);
-
-      done({
-        name, phone, street, number, district,
-        payment: chosen,
-        paymentDiscountApplied: applyPayment ? payDisc : 0,
-        deliveryFee
-      });
-    });
-    function showCkErr(msg){ ui.err.textContent = msg; setTimeout(()=>ui.err.textContent='', 3500); }
-  });
-
-  return result;
-
-  // UI com linha de "Entrega:"
-  function buildCkUI(){
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-      <style>
-      #ckWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:4000}
-      #ckBack{position:absolute;inset:0;background:rgba(0,0,0,.55)}
-      #ckBox{position:relative;width:680px;max-width:95vw;background:#0b1220;color:#e5e7eb;border:1px solid #1f2937;border-radius:16px;box-shadow:0 20px 48px rgba(0,0,0,.35);overflow:hidden}
-      #ckHd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#0f172a;border-bottom:1px solid #1f2937}
-      #ckHd .ttl{font-weight:800}
-      #ckBd{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-      #ckFt{padding:12px 14px;border-top:1px solid #1f2937;background:#0f172a;display:flex;gap:10px;align-items:center;justify-content:flex-end}
-      .ck-field{display:flex;flex-direction:column;gap:6px}
-      .ck-field label{font-size:12px;color:#94a3b8}
-      .ck-field input,.ck-field select{border:1px solid #243247;background:#0b1220;color:#e5e7eb;border-radius:10px;padding:9px 10px;outline:none}
-      .ck-col{display:flex;flex-direction:column;gap:12px}
-      .ck-row{display:flex;gap:10px}
-      .ck-row .ck-field{flex:1}
-      .ck-hint{font-size:12px;color:#94a3b8}
-      .ck-badge{font-size:12px;border:1px solid #243247;border-radius:999px;padding:4px 8px}
-      .ck-btn{border:1px solid #243247;background:#0f172a;color:#e5e7eb;border-radius:10px;padding:10px 14px;cursor:pointer}
-      .ck-btn.primary{background:#4f7cff;color:#000;border:none}
-      .ck-close{all:unset;cursor:pointer;color:#94a3b8}
-      .ck-total{font-weight:800}
-      .ck-warn{font-size:12px;color:#f59e0b}
-      </style>
-      <div id="ckWrap">
-        <div id="ckBack"></div>
-        <div id="ckBox">
-          <div id="ckHd">
-            <div class="ttl">Finalizar pedido</div>
-            <button id="ckClose" class="ck-close">✕</button>
-          </div>
-          <div id="ckBd">
-            <div class="ck-col">
-              <div class="ck-field">
-                <label>Nome <span class="ck-badge">obrigatório</span></label>
-                <input id="ckName" placeholder="Nome completo">
-              </div>
-              <div class="ck-field">
-                <label>Telefone <span class="ck-badge">obrigatório</span></label>
-                <input id="ckPhone" placeholder="(99) 9 9999 9999" inputmode="numeric">
-              </div>
-              <div class="ck-field">
-                <label>Rua <span class="ck-badge">obrigatório</span></label>
-                <input id="ckStreet" placeholder="Rua / Avenida">
-              </div>
-              <div class="ck-row">
-                <div class="ck-field">
-                  <label>Número <span class="ck-hint">(opcional)</span></label>
-                  <input id="ckNumber" placeholder="Nº">
-                </div>
-                <div class="ck-field">
-                  <label>Bairro <span class="ck-badge">obrigatório</span></label>
-                  <select id="ckDistrict"><option value="">Carregando…</option></select>
-                </div>
-              </div>
-            </div>
-            <div class="ck-col">
-              <div class="ck-field">
-                <label>Forma de pagamento</label>
-                <select id="ckPayment"></select>
-                <div class="ck-hint">Desconto da forma de pagamento <b>não acumula</b> com outros descontos.</div>
-                <div id="ckWarnNoAcc" class="ck-warn">Já existe desconto no carrinho — o desconto da forma de pagamento não será aplicado.</div>
-              </div>
-              <div class="ck-field">
-                <label>Resumo</label>
-                <div class="ck-row"><div>Subtotal:</div><div class="ck-total" id="ckTotalBase">—</div></div>
-                <div class="ck-row"><div>Desconto:</div><div class="ck-total" id="ckTotalDisc">—</div></div>
-                <div class="ck-row"><div>Entrega:</div><div class="ck-total" id="ckTotalShip">—</div></div>
-                <div class="ck-row"><div>Total:</div><div class="ck-total" id="ckTotalFinal">—</div></div>
-                <div id="ckErr" class="ck-hint" style="color:#fecaca;margin-top:6px"></div>
-              </div>
-            </div>
-          </div>
-          <div id="ckFt">
-            <button id="ckBack" class="ck-btn">Voltar</button>
-            <button id="ckConfirm" class="ck-btn primary">Enviar pedido</button>
-          </div>
-        </div>
-      </div>
-    `;
-    return {
-      wrap: wrap,
-      close: wrap.querySelector('#ckClose'),
-      back:  wrap.querySelector('#ckBack'),
-      confirm: wrap.querySelector('#ckConfirm'),
-      name:   wrap.querySelector('#ckName'),
-      phone:  wrap.querySelector('#ckPhone'),
-      street: wrap.querySelector('#ckStreet'),
-      number: wrap.querySelector('#ckNumber'),
-      district: wrap.querySelector('#ckDistrict'),
-      payment:  wrap.querySelector('#ckPayment'),
-      totalBase:  wrap.querySelector('#ckTotalBase'),
-      totalDisc:  wrap.querySelector('#ckTotalDisc'),
-      totalShip:  wrap.querySelector('#ckTotalShip'),
-      totalFinal: wrap.querySelector('#ckTotalFinal'),
-      warnNoAcc:  wrap.querySelector('#ckWarnNoAcc'),
-      err: wrap.querySelector('#ckErr'),
-    };
-  }
-}
-
-async function openCheckoutModal(cart){
-  const ui = buildCkUI();
-  document.body.appendChild(ui.wrap);
-
-  const ls = (k,d='')=>{ try{return localStorage.getItem(k)??d}catch{return d} };
-
-  // Prefill
-  ui.name.value    = ls('customer_name');
-  ui.phone.value   = ls('customer_phone');
-  ui.street.value  = ls('customer_street');
-  ui.number.value  = ls('customer_number');
-
-  ui.totalBase.textContent = moneyBR(cart.totals.subtotal);
-  ui.warnNoAcc.hidden = !(cart.totals.discount > 0);
-
-  // Bairros
-  const districts = await (async()=>{
-    for (const url of ['./bairros.json','../bairros.json']){
-      try{ const r = await fetch(url); if (r.ok){ const d = await r.json(); return Array.isArray(d)?d:Object.values(d) } }catch{}
+    ui.district.innerHTML = '<option value="">Selecione…</option>';
+    {
+      const frag = document.createDocumentFragment();
+      for (const name of districts) {
+        const fee = Number(feeMap[name] || 0);
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.dataset.fee = String(fee);
+        opt.textContent = fee ? `${name} — ${moneyBR(fee)}` : name;
+        if (name === lastDistrict) opt.selected = true;
+        frag.appendChild(opt);
+      }
+      ui.district.appendChild(frag);
     }
-    return [];
-  })();
-  ui.district.innerHTML = '<option value="">Selecione…</option>' + districts.map(n=>{
-    const v = String(n).trim(); const sel = (ls('customer_district')===v)?' selected':'';
-    return `<option value="${escapeHTML(v)}"${sel}>${escapeHTML(v)}</option>`;
-  }).join('');
 
-  // Pagamentos
-  const payOpts = await loadOrEnsurePaymentOptions();
-  ui.payment.innerHTML = payOpts.map(p=>{
-    const label = p.discount?.type==='percent'
-      ? `${p.name} — ${p.discount.value}% off`
-      : `${p.name}${p.discount?.value?` — ${moneyBR(p.discount.value)} off`:''}`;
-    const sel = (ls('payment_method_id')===p.id)?' selected':'';
-    return `<option value="${escapeHTML(p.id)}"${sel}>${escapeHTML(label)}</option>`;
-  }).join('');
+    const payOpts = await loadOrEnsurePaymentOptions();
+    ui.payment.innerHTML = payOpts.map(p=>{
+      const label = p.discount?.type==='percent'
+        ? `${p.name} — ${p.discount.value}% off`
+        : `${p.name}${p.discount?.value?` — ${moneyBR(p.discount.value)} off`:''}`;
+      const sel = (ls('payment_method_id')===p.id)?' selected':'';
+      return `<option value="${escapeHTML(p.id)}"${sel}>${escapeHTML(label)}</option>`;
+    }).join('');
 
-  // Máscara telefone
-  ui.phone.addEventListener('input', ()=>{
-    const d = cleanPhone(ui.phone.value);
-    let v = d; if (v.length>0) v='('+v;
-    if (v.length>3) v=v.slice(0,3)+') '+v.slice(3);
-    if (v.length>6) v=v.slice(0,6)+' '+v.slice(6);
-    if (v.length>11) v=v.slice(0,11)+' '+v.slice(11);
-    ui.phone.value = v.slice(0,18);
-  });
-
-  // Recalcular totais ao trocar pagamento
-  const refreshTotals = ()=>{
-    const subtotal = cart.totals.subtotal;
-    const cartDisc = cart.totals.discount;
-    const chosen = payOpts.find(p=>p.id===ui.payment.value);
-    const payDisc = calcPayDiscount(subtotal, chosen?.discount);
-    const applyPayment = !(cartDisc>0);
-    const total = Math.max(0, subtotal - (applyPayment ? payDisc : cartDisc));
-    ui.totalDisc.textContent  = moneyBR(applyPayment ? payDisc : cartDisc);
-    ui.totalFinal.textContent = moneyBR(total);
-  };
-  ui.payment.addEventListener('change', refreshTotals);
-  refreshTotals();
-
-  // Fluxo de retorno
-  const result = await new Promise((resolve)=>{
-    const done = (payload)=>{ ui.wrap.remove(); resolve(payload); };
-    ui.close.addEventListener('click', ()=>done(null));
-    ui.backdrop.addEventListener('click', ()=>done(null)); // clique fora fecha
-    ui.backBtn.addEventListener('click', ()=>done(null));  // botão Voltar
-
-    ui.confirm.addEventListener('click', ()=>{
-      const name = ui.name.value.trim();
-      const phone = cleanPhone(ui.phone.value);
-      const street = ui.street.value.trim();
-      const number = ui.number.value.trim();
-      const district = ui.district.value;
-
-      if (!name)   return showErr('Informe o nome.');
-      if (!isValidPhone(phone)) return showErr('Telefone inválido. Use (99) 9 9999 9999.');
-      if (!street) return showErr('Informe a rua/avenida.');
-      if (!district) return showErr('Selecione o bairro.');
-
-      // Salva LS
-      try{
-        localStorage.setItem('customer_name', name);
-        localStorage.setItem('customer_phone', phone);
-        localStorage.setItem('customer_street', street);
-        localStorage.setItem('customer_number', number);
-        localStorage.setItem('customer_district', district);
-        localStorage.setItem('payment_method_id', ui.payment.value);
-      }catch{}
-
-      const chosen = payOpts.find(p=>p.id===ui.payment.value) || null;
-      const payDisc = calcPayDiscount(cart.totals.subtotal, chosen?.discount);
-      const applyPayment = !(cart.totals.discount > 0);
-
-      done({
-        name, phone, street, number, district,
-        payment: chosen,
-        paymentDiscountApplied: applyPayment ? payDisc : 0
-      });
+    ui.phone.addEventListener('input', ()=>{
+      const d = cleanPhone(ui.phone.value);
+      let v = d; if (v.length>0) v='('+v;
+      if (v.length>3) v=v.slice(0,3)+') '+v.slice(3);
+      if (v.length>6) v=v.slice(0,6)+' '+v.slice(6);
+      if (v.length>11) v=v.slice(0,11)+' '+v.slice(11);
+      ui.phone.value = v.slice(0,18);
     });
 
-    function showErr(msg){ ui.err.textContent = msg; setTimeout(()=>ui.err.textContent='', 3500); }
-  });
+    const refreshTotals = ()=>{
+      const subtotal = cart.totals.subtotal;
+      const cartDisc = cart.totals.discount;
+      const chosen = payOpts.find(p=>p.id===ui.payment.value);
+      const payDisc = calcPayDiscount(subtotal, chosen?.discount);
+      const applyPayment = !(cartDisc > 0);
+      const sel = ui.district.options[ui.district.selectedIndex];
+      const shipFee = Number(sel?.dataset?.fee || 0);
+      const descontoAplicado = applyPayment ? payDisc : cartDisc;
+      const total = Math.max(0, subtotal - descontoAplicado) + shipFee;
+      ui.totalDisc.textContent  = moneyBR(descontoAplicado);
+      if (ui.totalShip) ui.totalShip.textContent = moneyBR(shipFee);
+      ui.totalFinal.textContent = moneyBR(total);
+    };
 
-  return result;
+    ui.payment.addEventListener('change', refreshTotals);
+    ui.district.addEventListener('change', refreshTotals);
+    refreshTotals();
 
-  // === UI builder (ids únicos) ===
-  function buildCkUI(){
-    const wrap = document.createElement('div');
-    wrap.innerHTML = `
-      <style>
-      #ckWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:2147483647}
-      #ckBackdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:1}
-      #ckBox{position:relative;z-index:2;width:680px;max-width:95vw;background:#0b1220;color:#e5e7eb;
-             border:1px solid #1f2937;border-radius:16px;box-shadow:0 20px 48px rgba(0,0,0,.35);overflow:hidden}
-      #ckHd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#0f172a;border-bottom:1px solid #1f2937}
-      #ckHd .ttl{font-weight:800}
-      #ckBd{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-      #ckFt{padding:12px 14px;border-top:1px solid #1f2937;background:#0f172a;display:flex;gap:10px;align-items:center;justify-content:flex-end}
-      .ck-field{display:flex;flex-direction:column;gap:6px}
-      .ck-field label{font-size:12px;color:#94a3b8}
-      .ck-field input,.ck-field select{border:1px solid #243247;background:#0b1220;color:#e5e7eb;border-radius:10px;padding:9px 10px;outline:none}
-      .ck-col{display:flex;flex-direction:column;gap:12px}
-      .ck-row{display:flex;gap:10px}
-      .ck-row .ck-field{flex:1}
-      .ck-hint{font-size:12px;color:#94a3b8}
-      .ck-badge{font-size:12px;border:1px solid #243247;border-radius:999px;padding:4px 8px}
-      .ck-btn{border:1px solid #243247;background:#0f172a;color:#e5e7eb;border-radius:10px;padding:10px 14px;cursor:pointer}
-      .ck-btn.primary{background:#4f7cff;color:#000;border:none}
-      .ck-close{all:unset;cursor:pointer;color:#94a3b8}
-      .ck-total{font-weight:800}
-      .ck-warn{font-size:12px;color:#f59e0b}
-      </style>
-      <div id="ckWrap">
-        <div id="ckBackdrop"></div>
-        <div id="ckBox">
-          <div id="ckHd">
-            <div class="ttl">Finalizar pedido</div>
-            <button id="ckClose" class="ck-close">✕</button>
-          </div>
-          <div id="ckBd">
-            <div class="ck-col">
-              <div class="ck-field">
-                <label>Nome <span class="ck-badge">obrigatório</span></label>
-                <input id="ckName" placeholder="Nome completo">
-              </div>
-              <div class="ck-field">
-                <label>Telefone <span class="ck-badge">obrigatório</span></label>
-                <input id="ckPhone" placeholder="(99) 9 9999 9999" inputmode="numeric">
-              </div>
-              <div class="ck-field">
-                <label>Rua <span class="ck-badge">obrigatório</span></label>
-                <input id="ckStreet" placeholder="Rua / Avenida">
-              </div>
-              <div class="ck-row">
+    const result = await new Promise((resolve)=>{
+      const done = (payload)=>{ ui.wrap.remove(); resolve(payload); };
+      ui.close.addEventListener('click', ()=>done(null));
+      ui.back .addEventListener('click', ()=>done(null));
+      ui.confirm.addEventListener('click', ()=>{
+        const name = ui.name.value.trim();
+        const phone = cleanPhone(ui.phone.value);
+        const street = ui.street.value.trim();
+        const number = ui.number.value.trim();
+        const district = ui.district.value;
+        if (!name)   return showCkErr('Informe o nome.');
+        if (!isValidPhone(phone)) return showCkErr('Telefone inválido. Use (99) 9 9999 9999.');
+        if (!street) return showCkErr('Informe a rua/avenida.');
+        if (!district) return showCkErr('Selecione o bairro.');
+
+        try{
+          localStorage.setItem('customer_name', name);
+          localStorage.setItem('customer_phone', phone);
+          localStorage.setItem('customer_street', street);
+          localStorage.setItem('customer_number', number);
+          localStorage.setItem('customer_district', district);
+          localStorage.setItem('payment_method_id', ui.payment.value);
+        }catch{}
+
+        const chosen = payOpts.find(p=>p.id===ui.payment.value) || null;
+        const payDisc = calcPayDiscount(cart.totals.subtotal, chosen?.discount);
+        const applyPayment = !(cart.totals.discount > 0);
+        const deliveryFee = Number(feeMap[district] || 0);
+
+        done({
+          name, phone, street, number, district,
+          payment: chosen,
+          paymentDiscountApplied: applyPayment ? payDisc : 0,
+          deliveryFee
+        });
+      });
+      function showCkErr(msg){ ui.err.textContent = msg; setTimeout(()=>ui.err.textContent='', 3500); }
+    });
+
+    return result;
+
+    function buildCkUI(){
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <style>
+        #ckWrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:4000}
+        #ckBack{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+        #ckBox{position:relative;width:680px;max-width:95vw;background:#0b1220;color:#e5e7eb;border:1px solid #1f2937;border-radius:16px;box-shadow:0 20px 48px rgba(0,0,0,.35);overflow:hidden}
+        #ckHd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#0f172a;border-bottom:1px solid #1f2937}
+        #ckHd .ttl{font-weight:800}
+        #ckBd{padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        #ckFt{padding:12px 14px;border-top:1px solid #1f2937;background:#0f172a;display:flex;gap:10px;align-items:center;justify-content:flex-end}
+        .ck-field{display:flex;flex-direction:column;gap:6px}
+        .ck-field label{font-size:12px;color:#94a3b8}
+        .ck-field input,.ck-field select{border:1px solid #243247;background:#0b1220;color:#e5e7eb;border-radius:10px;padding:9px 10px;outline:none}
+        .ck-col{display:flex;flex-direction:column;gap:12px}
+        .ck-row{display:flex;gap:10px}
+        .ck-row .ck-field{flex:1}
+        .ck-hint{font-size:12px;color:#94a3b8}
+        .ck-badge{font-size:12px;border:1px solid #243247;border-radius:999px;padding:4px 8px}
+        .ck-btn{border:1px solid #243247;background:#0f172a;color:#e5e7eb;border-radius:10px;padding:10px 14px;cursor:pointer}
+        .ck-btn.primary{background:#4f7cff;color:#000;border:none}
+        .ck-close{all:unset;cursor:pointer;color:#94a3b8}
+        .ck-total{font-weight:800}
+        .ck-warn{font-size:12px;color:#f59e0b}
+        </style>
+        <div id="ckWrap">
+          <div id="ckBack"></div>
+          <div id="ckBox">
+            <div id="ckHd">
+              <div class="ttl">Finalizar pedido</div>
+              <button id="ckClose" class="ck-close">✕</button>
+            </div>
+            <div id="ckBd">
+              <div class="ck-col">
                 <div class="ck-field">
-                  <label>Número <span class="ck-hint">(opcional)</span></label>
-                  <input id="ckNumber" placeholder="Nº">
+                  <label>Nome <span class="ck-badge">obrigatório</span></label>
+                  <input id="ckName" placeholder="Nome completo">
                 </div>
                 <div class="ck-field">
-                  <label>Bairro <span class="ck-badge">obrigatório</span></label>
-                  <select id="ckDistrict"><option value="">Carregando…</option></select>
+                  <label>Telefone <span class="ck-badge">obrigatório</span></label>
+                  <input id="ckPhone" placeholder="(99) 9 9999 9999" inputmode="numeric">
+                </div>
+                <div class="ck-field">
+                  <label>Rua <span class="ck-badge">obrigatório</span></label>
+                  <input id="ckStreet" placeholder="Rua / Avenida">
+                </div>
+                <div class="ck-row">
+                  <div class="ck-field">
+                    <label>Número <span class="ck-hint">(opcional)</span></label>
+                    <input id="ckNumber" placeholder="Nº">
+                  </div>
+                  <div class="ck-field">
+                    <label>Bairro <span class="ck-badge">obrigatório</span></label>
+                    <select id="ckDistrict"><option value="">Carregando…</option></select>
+                  </div>
+                </div>
+              </div>
+              <div class="ck-col">
+                <div class="ck-field">
+                  <label>Forma de pagamento</label>
+                  <select id="ckPayment"></select>
+                  <div class="ck-hint">Desconto da forma de pagamento <b>não acumula</b> com outros descontos.</div>
+                  <div id="ckWarnNoAcc" class="ck-warn">Já existe desconto no carrinho — o desconto da forma de pagamento não será aplicado.</div>
+                </div>
+                <div class="ck-field">
+                  <label>Resumo</label>
+                  <div class="ck-row"><div>Subtotal:</div><div class="ck-total" id="ckTotalBase">—</div></div>
+                  <div class="ck-row"><div>Desconto:</div><div class="ck-total" id="ckTotalDisc">—</div></div>
+                  <div class="ck-row"><div>Entrega:</div><div class="ck-total" id="ckTotalShip">—</div></div>
+                  <div class="ck-row"><div>Total:</div><div class="ck-total" id="ckTotalFinal">—</div></div>
+                  <div id="ckErr" class="ck-hint" style="color:#fecaca;margin-top:6px"></div>
                 </div>
               </div>
             </div>
-            <div class="ck-col">
-              <div class="ck-field">
-                <label>Forma de pagamento</label>
-                <select id="ckPayment"></select>
-                <div class="ck-hint">Desconto da forma de pagamento <b>não acumula</b> com outros descontos.</div>
-                <div id="ckWarnNoAcc" class="ck-warn">Já existe desconto no carrinho — o desconto da forma de pagamento não será aplicado.</div>
-              </div>
-              <div class="ck-field">
-                <label>Resumo</label>
-                <div class="ck-row"><div>Subtotal:</div><div class="ck-total" id="ckTotalBase">—</div></div>
-                <div class="ck-row"><div>Desconto:</div><div class="ck-total" id="ckTotalDisc">—</div></div>
-                <div class="ck-row"><div>Total:</div><div class="ck-total" id="ckTotalFinal">—</div></div>
-                <div id="ckErr" class="ck-hint" style="color:#fecaca;margin-top:6px"></div>
-              </div>
+            <div id="ckFt">
+              <button id="ckBack" class="ck-btn">Voltar</button>
+              <button id="ckConfirm" class="ck-btn primary">Enviar pedido</button>
             </div>
-          </div>
-          <div id="ckFt">
-            <button id="ckBackBtn" class="ck-btn">Voltar</button>
-            <button id="ckConfirm" class="ck-btn primary">Enviar pedido</button>
           </div>
         </div>
-      </div>
-    `;
-    return {
-      wrap: wrap,
-      backdrop: wrap.querySelector('#ckBackdrop'),
-      close: wrap.querySelector('#ckClose'),
-      backBtn: wrap.querySelector('#ckBackBtn'),
-      confirm: wrap.querySelector('#ckConfirm'),
-      name:   wrap.querySelector('#ckName'),
-      phone:  wrap.querySelector('#ckPhone'),
-      street: wrap.querySelector('#ckStreet'),
-      number: wrap.querySelector('#ckNumber'),
-      district: wrap.querySelector('#ckDistrict'),
-      payment:  wrap.querySelector('#ckPayment'),
-      totalBase:  wrap.querySelector('#ckTotalBase'),
-      totalDisc:  wrap.querySelector('#ckTotalDisc'),
-      totalFinal: wrap.querySelector('#ckTotalFinal'),
-      warnNoAcc:  wrap.querySelector('#ckWarnNoAcc'),
-      err: wrap.querySelector('#ckErr'),
-    };
+      `;
+      return {
+        wrap: wrap,
+        close: wrap.querySelector('#ckClose'),
+        back:  wrap.querySelector('#ckBack'),
+        confirm: wrap.querySelector('#ckConfirm'),
+        name:   wrap.querySelector('#ckName'),
+        phone:  wrap.querySelector('#ckPhone'),
+        street: wrap.querySelector('#ckStreet'),
+        number: wrap.querySelector('#ckNumber'),
+        district: wrap.querySelector('#ckDistrict'),
+        payment:  wrap.querySelector('#ckPayment'),
+        totalBase:  wrap.querySelector('#ckTotalBase'),
+        totalDisc:  wrap.querySelector('#ckTotalDisc'),
+        totalShip:  wrap.querySelector('#ckTotalShip'),
+        totalFinal: wrap.querySelector('#ckTotalFinal'),
+        warnNoAcc:  wrap.querySelector('#ckWarnNoAcc'),
+        err: wrap.querySelector('#ckErr'),
+      };
+    }
   }
-}
-
 
   async function loadOrEnsurePaymentOptions(){
     const { db, ready } = await import('./server.js'); await ready;
@@ -989,17 +843,11 @@ async function openCheckoutModal(cart){
     return arr;
   }
 }
-// Carrega bairros + taxas de vários formatos aceitos.
-// Suporta:
-//  - ["Centro", "Jardim", ...]                       (sem taxa -> 0)
-//  - [{name:"Centro", fee: 7.5}, ...]                (ou {bairro/nome, entrega})
-//  - {"Centro": 7.5, "Jardim": 5, ...}               (mapa)
-//  - bairros_frete.json (mesmo formato do mapa)      -> sobrescreve taxas
+
 async function loadDistrictsAndFees() {
   let list = [];
   let fees = {};
 
-  // bairros.json
   for (const url of ['./bairros.json','../bairros.json']) {
     try {
       const r = await fetch(url, { cache:'no-store' });
@@ -1018,7 +866,6 @@ async function loadDistrictsAndFees() {
               if (Number.isFinite(fee)) fees[name] = fee;
             }
           }
-          // (se vier número puro não tem como inferir o nome -> ignora)
         }
       } else if (d && typeof d === 'object') {
         for (const [k,v] of Object.entries(d)) {
@@ -1033,7 +880,6 @@ async function loadDistrictsAndFees() {
     } catch {}
   }
 
-  // bairros_frete.json (override)
   for (const url of ['./bairros_frete.json','../bairros_frete.json']) {
     try {
       const r = await fetch(url, { cache:'no-store' });
@@ -1050,11 +896,9 @@ async function loadDistrictsAndFees() {
     } catch {}
   }
 
-  // dedup + ordena
   list = Array.from(new Set(list)).sort((a,b)=> a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
   return { list, fees };
 }
-
 
 function updatePillsUI(){
   if (els.pillStock){
@@ -1075,11 +919,13 @@ function loadCart(){
     return Array.isArray(arr) ? arr : [];
   }catch{ return []; }
 }
+
 function saveCart(){
   localStorage.setItem(LS_CART, JSON.stringify(cart));
   localStorage.setItem(LS_CART_UPDATED, new Date().toISOString());
   renderCart();
 }
+
 function fromProduct(p){
   return {
     id: productId(p),
@@ -1089,6 +935,7 @@ function fromProduct(p){
     qty: 1
   };
 }
+
 function addToCart(item){
   const idx = cart.findIndex(it => it.id === item.id);
   if (idx >= 0) cart[idx].qty += item.qty;
@@ -1096,22 +943,26 @@ function addToCart(item){
   saveCart();
   els.cartPanel.classList.add('open');
 }
+
 function incItem(id, d){
   const it = cart.find(i => i.id === id);
   if (!it) return;
   it.qty = Math.max(1, it.qty + d);
   saveCart();
 }
+
 function removeItem(id){
   cart = cart.filter(i => i.id !== id);
   saveCart();
 }
+
 function clearCart(){
   if (!cart.length) return;
   if (!confirm('Limpar carrinho?')) return;
   cart = [];
   saveCart();
 }
+
 function renderCart(){
   const rows = cart.map(it => {
     const total = it.unitPrice * it.qty;
