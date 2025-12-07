@@ -1376,37 +1376,48 @@
       els.ts.textContent = `Atualizado ${dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}`;
     }
 
-    async function firstLoad(){
-      const ref = db.collection('data').doc('keys');
-      const snap = await ref.get();
-      const d = snap.exists ? snap.data() : {};
-      
-      rawSrc = smartCategorias.attachCategoriaNomeFromId(d.produtos || []);
+async function firstLoad(){
+  const ref = db.collection('data').doc('keys');
+  const snap = await ref.get();
+  const d = snap.exists ? snap.data() : {};
 
-      rawSrc = d.produtos || [];
-      const view = buildLocalView(rawSrc);
-      localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
-      all = view;
-      render(els.q.value);
-      updateMeta(view.length, normalize(rawSrc).length, true);
+  // (opcional) cache local das categorias
+  if (Array.isArray(d.categorias)) {
+    localStorage.setItem('categorias', JSON.stringify(d.categorias));
+  }
+
+  // ENRIQUECE e NÃO sobrescreve depois
+  rawSrc = smartCategorias.attachCategoriaNomeFromId(d.produtos || [], d.categorias || []);
+
+  const view = buildLocalView(rawSrc);
+  localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
+  all = view;
+  render(els.q.value);
+  updateMeta(view.length, normalize(rawSrc).length, true);
+}
+
+
+function setupRealtime(){
+  const ref = db.collection('data').doc('keys');
+  unsub = ref.onSnapshot(doc => {
+    const d = doc.exists ? doc.data() : {};
+
+    if (Array.isArray(d.categorias)) {
+      localStorage.setItem('categorias', JSON.stringify(d.categorias));
     }
 
-    function setupRealtime(){
-      const ref = db.collection('data').doc('keys');
-      unsub = ref.onSnapshot(doc => {
-        const d = doc.exists ? doc.data() : {};
-        rawSrc = smartCategorias.attachCategoriaNomeFromId(d.produtos || []);
+    rawSrc = smartCategorias.attachCategoriaNomeFromId(d.produtos || [], d.categorias || []);
 
-        rawSrc = d.produtos || [];
-        const view = buildLocalView(rawSrc);
-        localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
-        all = view;
-        render(els.q.value);
-        updateMeta(view.length, normalize(rawSrc).length, true);
-      }, err => {
-        console.error('[catalog] listener error', err);
-      });
-    }
+    const view = buildLocalView(rawSrc);
+    localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
+    all = view;
+    render(els.q.value);
+    updateMeta(view.length, normalize(rawSrc).length, true);
+  }, err => {
+    console.error('[catalog] listener error', err);
+  });
+}
+
 
     function loadFromLocal(){
       try{
