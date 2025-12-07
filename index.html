@@ -1395,6 +1395,8 @@
       const ref = db.collection('data').doc('keys');
       unsub = ref.onSnapshot(doc => {
         const d = doc.exists ? doc.data() : {};
+        rawSrc = smartCategorias.attachCategoriaNomeFromId(d.produtos || []);
+
         rawSrc = d.produtos || [];
         const view = buildLocalView(rawSrc);
         localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
