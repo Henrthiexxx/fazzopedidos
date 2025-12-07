@@ -1132,6 +1132,59 @@
   <footer class="foot">
     <span id="ts">—</span>
   </footer>
+<script>
+(function (global) {
+  const LS_CATS = 'categorias';
+
+  function loadCats() {
+    try { return JSON.parse(localStorage.getItem(LS_CATS) || '[]'); }
+    catch { return []; }
+  }
+  function buildMap(arr) {
+    const m = new Map();
+    for (const c of (arr||[])) if (c && c.id) m.set(String(c.id), c);
+    return m;
+  }
+  function pathFromId(id, map) {
+    const p = [];
+    let cur = map.get(String(id));
+    while (cur) {
+      p.unshift(cur.nome);
+      cur = cur.parentId ? map.get(String(cur.parentId)) : null;
+    }
+    return p.join(' / ');
+  }
+
+  /**
+   * Converte categoriaId -> categoria (string caminho) sem alterar UI.
+   * - Lê categorias do localStorage por padrão (ou aceite um array em `categoriasOverride`)
+   * - Retorna um NOVO array de produtos (não muta o original)
+   */
+  function attachCategoriaNomeFromId(produtos, categoriasOverride) {
+    const catsArr = Array.isArray(categoriasOverride) ? categoriasOverride : loadCats();
+    const map = buildMap(catsArr);
+
+    return (produtos || []).map((p) => {
+      const out = { ...p };
+      // Se já vier 'categoria' (legado), apenas normaliza
+      if (out.categoria && typeof out.categoria === 'string') {
+        out.categoria = out.categoria.trim();
+        return out;
+      }
+      // Se vier no formato novo (categoriaId), monta caminho
+      if (out.categoriaId) {
+        const caminho = pathFromId(out.categoriaId, map);
+        if (caminho) out.categoria = caminho; // <- chave usada hoje no agrupamento
+      }
+      // Fallback: deixa vazio; seu agrupamento já trata "Sem categoria"
+      return out;
+    });
+  }
+
+  // expõe global
+  global.smartCategorias = { attachCategoriaNomeFromId };
+})(window);
+</script>
 
   <script type="module">
     // Inline catalog.js com estilos premium
@@ -1327,6 +1380,9 @@
       const ref = db.collection('data').doc('keys');
       const snap = await ref.get();
       const d = snap.exists ? snap.data() : {};
+      
+      rawSrc = smartCategorias.attachCategoriaNomeFromId(d.produtos || []);
+
       rawSrc = d.produtos || [];
       const view = buildLocalView(rawSrc);
       localStorage.setItem(LS_PRODUCTS_VIEW, JSON.stringify(view));
