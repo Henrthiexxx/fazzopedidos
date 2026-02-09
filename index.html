@@ -3,911 +3,454 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Pedrad - Painel Admin</title>
-    <meta name="theme-color" content="#8b5cf6">
-    <link rel="stylesheet" href="index.css">
-    <link rel="stylesheet" href="admin-reviews.css">
-<link rel="stylesheet" href="admin-notifications.css">
-<link rel="stylesheet" href="admin-coupons.css">
+    <title>Cadastro de Entregador - Pedrad</title>
+    <meta name="theme-color" content="#000000">
+    <style>
+        :root {
+            --bg: #000; --bg-card: #0a0a0a; --bg-input: #171717;
+            --text: #fff; --text-muted: #737373; --border: #262626;
+            --primary: #fff; --success: #22c55e; --danger: #ef4444;
+            --warning: #f59e0b; --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg); color: var(--text); min-height: 100vh;
+            display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .container { width: 100%; max-width: 460px; }
+
+        .logo {
+            text-align: center; margin-bottom: 32px;
+        }
+        .logo-icon { font-size: 3rem; margin-bottom: 8px; }
+        .logo h1 {
+            font-size: 0.85rem; font-weight: 300; letter-spacing: 3px;
+            text-transform: uppercase; color: var(--text-muted);
+        }
+        .logo p { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+        .card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); overflow: hidden;
+        }
+        .card-header {
+            padding: 20px 24px; border-bottom: 1px solid var(--border);
+            font-size: 0.9rem; font-weight: 500; letter-spacing: 0.5px;
+        }
+        .card-body { padding: 24px; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-label {
+            display: block; margin-bottom: 6px; font-size: 0.7rem;
+            color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .form-input {
+            width: 100%; padding: 12px 14px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--bg-input);
+            color: var(--text); font-size: 0.9rem; transition: border-color 0.2s;
+        }
+        .form-input:focus { outline: none; border-color: var(--primary); }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .password-wrap { position: relative; }
+        .password-wrap .form-input { padding-right: 44px; }
+        .password-toggle {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--text-muted); cursor: pointer;
+            font-size: 1.1rem; padding: 4px;
+        }
+
+        .strength-bar {
+            height: 3px; border-radius: 2px; background: var(--border);
+            margin-top: 8px; overflow: hidden;
+        }
+        .strength-fill {
+            height: 100%; border-radius: 2px; transition: all 0.3s;
+            width: 0; background: var(--danger);
+        }
+        .strength-text {
+            font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;
+        }
+
+        .btn {
+            width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--primary);
+            background: var(--primary); color: #000; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn:hover { background: transparent; color: var(--primary); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-secondary {
+            background: transparent; color: var(--text); border-color: var(--border);
+            font-weight: 400; margin-top: 12px;
+        }
+        .btn-secondary:hover { border-color: var(--primary); }
+
+        .info-box {
+            padding: 14px 16px; border-radius: 8px; font-size: 0.8rem;
+            line-height: 1.5; margin-bottom: 20px;
+        }
+        .info-box.warning {
+            background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+            color: var(--warning);
+        }
+        .info-box.success {
+            background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3);
+            color: var(--success);
+        }
+        .info-box.danger {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+            color: var(--danger);
+        }
+
+        /* Steps indicator */
+        .steps { display: flex; gap: 8px; margin-bottom: 24px; }
+        .step {
+            flex: 1; height: 3px; border-radius: 2px; background: var(--border);
+            transition: background 0.3s;
+        }
+        .step.active { background: var(--primary); }
+        .step.done { background: var(--success); }
+
+        /* Success screen */
+        .success-screen { text-align: center; padding: 40px 24px; }
+        .success-icon { font-size: 4rem; margin-bottom: 16px; }
+        .success-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 8px; }
+        .success-text { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; }
+
+        .terms-check {
+            display: flex; align-items: flex-start; gap: 10px;
+            margin-bottom: 20px; cursor: pointer;
+        }
+        .terms-check input { margin-top: 3px; accent-color: var(--primary); }
+        .terms-check span { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
+
+        .toast {
+            position: fixed; bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card); padding: 14px 24px; border-radius: 8px;
+            border: 1px solid var(--border); z-index: 300; opacity: 0;
+            transition: all 0.3s; font-size: 0.85rem;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 480px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
-
-
     <div class="toast" id="toast"></div>
-    
-    <!-- Auth -->
-    <div id="authPage" class="auth-container">
-        <div class="auth-box">
-            <div class="auth-logo">
-                <h1>👑 Pedrad Admin</h1>
-                <p>Painel de Administração</p>
-            </div>
-            <div class="card">
-                <form onsubmit="handleLogin(event)">
+
+    <div class="container">
+        <div class="logo">
+            <div class="logo-icon">🛵</div>
+            <h1>Pedrad</h1>
+            <p>Cadastro de Entregador</p>
+        </div>
+
+        <div class="card">
+            <!-- Step 1: Dados pessoais -->
+            <div id="step1">
+                <div class="card-header">Dados Pessoais</div>
+                <div class="card-body">
+                    <div class="steps">
+                        <div class="step active"></div>
+                        <div class="step"></div>
+                        <div class="step"></div>
+                    </div>
+
                     <div class="form-group">
-                        <label class="form-label">E-mail</label>
-                        <input type="email" class="form-input" id="loginEmail" placeholder="admin@pedrad.com" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Senha</label>
-                        <input type="password" class="form-input" id="loginPassword" placeholder="••••••••" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-block">Entrar</button>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Main App -->
-    <div id="mainApp" style="display: none;">
-        <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
-        
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="sidebar-logo">👑 Pedrad Admin</div>
-            </div>
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-section-title">Visão Geral</div>
-                    <div class="nav-item active" onclick="showPage('dashboard')"><span>📊</span> Dashboard</div>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Gestão</div>
-                    <div class="nav-item" onclick="showPage('stores')"><span>🏪</span> Lojas <span class="nav-badge" id="storesBadge" style="display:none;">0</span></div>
-                    <div class="nav-item" onclick="showPage('drivers')"><span>🛵</span> Entregadores <span class="nav-badge" id="driversBadge" style="display:none;">0</span></div>
-                    <div class="nav-item" onclick="showPage('orders')"><span>📦</span> Pedidos</div>
-                    <div class="nav-item" onclick="showPage('users')"><span>👥</span> Clientes</div>
-                    <div class="nav-item" onclick="showPageAndInit('reviews', 'AdminReviews')">
-    <span>⭐</span>
-    Avaliações
-</div>
-
-<div class="nav-item" onclick="showPageAndInit('notifications', 'AdminNotifications')">
-    <span>📢</span>
-    Notificações
-</div>
-
-<div class="nav-item" onclick="showPageAndInit('coupons', 'AdminCoupons')">
-    <span>🎫</span>
-    Cupons
-</div>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Financeiro</div>
-                    <div class="nav-item" onclick="showPage('fees')"><span>💳</span> Taxas por Bairro</div>
-                    <div class="nav-item" onclick="showPage('storeFees')"><span>🏷️</span> Taxas de Lojas</div>
-                    <div class="nav-item" onclick="showPage('finance')"><span>💰</span> Financeiro</div>
-                    <div class="nav-item" onclick="showPage('reports')"><span>📈</span> Relatórios</div>
-                </div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Sistema</div>
-                    <div class="nav-item" onclick="showPage('settings')"><span>⚙️</span> Configurações</div>
-                    <div class="nav-item" onclick="handleLogout()"><span>🚪</span> Sair</div>
-                </div>
-            </nav>
-        </aside>
-        
-        <!-- Main -->
-        <main class="main-content">
-            <header class="topbar">
-                <div style="display: flex; align-items: center; gap: 16px;">
-                    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
-                    <h1 class="topbar-title" id="pageTitle">Dashboard</h1>
-                </div>
-                <div class="topbar-actions">
-                    <span class="admin-badge">👑 Admin</span>
-                </div>
-            </header>
-            
-            <!-- Dashboard -->
-            <div id="dashboardPage" class="page active">
-                <div class="stats-grid">
-                    <div class="stat-card purple"><div class="stat-icon">🏪</div><div class="stat-value" id="totalStores">0</div><div class="stat-label">Lojas ativas</div></div>
-                    <div class="stat-card blue"><div class="stat-icon">🛵</div><div class="stat-value" id="totalDrivers">0</div><div class="stat-label">Entregadores</div></div>
-                    <div class="stat-card green"><div class="stat-icon">📦</div><div class="stat-value" id="totalOrders">0</div><div class="stat-label">Pedidos hoje</div></div>
-                    <div class="stat-card yellow"><div class="stat-icon">💰</div><div class="stat-value" id="totalRevenue">R$ 0</div><div class="stat-label">Faturamento hoje</div></div>
-                </div>
-                
-                <div class="dashboard-grid">
-                    <div class="card">
-                        <div class="card-header"><div class="card-title">📦 Pedidos em Tempo Real</div></div>
-                        <div id="liveOrders" class="live-orders"></div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header"><div class="card-title">📊 Resumo por Status</div></div>
-                        <div id="statusSummary" class="status-summary"></div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header"><div class="card-title">🏆 Top Lojas (Hoje)</div></div>
-                    <div id="topStores"></div>
-                </div>
-            </div>
-            
-<!-- Stores -->
-<div id="storesPage" class="page">
-    <div class="page-header">
-        <div class="filters">
-            <div class="filter-chip active" onclick="filterStores('all')">Todas</div>
-            <div class="filter-chip" onclick="filterStores('pending')">⏳ Pendentes</div>
-            <div class="filter-chip" onclick="filterStores('active')">✅ Ativas</div>
-            <div class="filter-chip" onclick="filterStores('blocked')">🚫 Bloqueadas</div>
-        </div>
-        <input type="text" class="form-input search-input" placeholder="🔍 Buscar loja..." id="storeSearch" oninput="renderStores()">
-        <button class="btn btn-primary" onclick="openStoreModal()">+ Nova Loja</button>
-    </div>
-    <div id="storesList" class="data-list"></div>
-</div>
-            <!-- Drivers -->
-            <div id="driversPage" class="page">
-                <div class="page-header">
-                    <div class="filters">
-                        <div class="filter-chip active" onclick="filterDrivers('all')">Todos</div>
-                        <div class="filter-chip" onclick="filterDrivers('online')">🟢 Online</div>
-                        <div class="filter-chip" onclick="filterDrivers('offline')">⚫ Offline</div>
-                        <div class="filter-chip" onclick="filterDrivers('pending')">⏳ Pendentes</div>
-                        <div class="filter-chip" onclick="filterDrivers('blocked')">🚫 Bloqueados</div>
-                    </div>
-                    <button class="btn btn-primary" onclick="openDriverModal()">+ Novo Entregador</button>
-                </div>
-                <div id="driversList" class="data-list"></div>
-            </div>
-            
-            <!-- Orders -->
-            <div id="ordersPage" class="page">
-                <div class="page-header">
-                    <div class="filters">
-                        <div class="filter-chip active" onclick="filterOrders('all')">Todos</div>
-                        <div class="filter-chip" onclick="filterOrders('pending')">🟡 Pendentes</div>
-                        <div class="filter-chip" onclick="filterOrders('preparing')">🔵 Preparando</div>
-                        <div class="filter-chip" onclick="filterOrders('delivering')">🟢 Entregando</div>
-                        <div class="filter-chip" onclick="filterOrders('delivered')">✅ Entregues</div>
-                        <div class="filter-chip" onclick="filterOrders('cancelled')">❌ Cancelados</div>
-                    </div>
-                    <input type="date" class="form-input" id="orderDate" onchange="loadOrders()" style="width: auto;">
-                </div>
-                <div id="ordersList" class="data-list"></div>
-            </div>
-            
-            <!-- Users -->
-            <div id="usersPage" class="page">
-                <div class="page-header">
-                    <input type="text" class="form-input search-input" placeholder="🔍 Buscar cliente..." id="userSearch" oninput="renderUsers()">
-                    <button class="btn btn-primary" onclick="openUserModal()">+ Novo Cliente</button>
-                </div>
-                <div id="usersList" class="data-list"></div>
-            </div>
-            
-            <!-- Reviews -->
-            <div id="reviewsPage" class="page">
-                <div class="page-header">
-                    <div class="filters">
-                        <div class="filter-chip active" onclick="filterReviews('all')">Todas</div>
-                        <div class="filter-chip" onclick="filterReviews('store')">🏪 Lojas</div>
-                        <div class="filter-chip" onclick="filterReviews('driver')">🛵 Entregadores</div>
-                        <div class="filter-chip" onclick="filterReviews('product')">📦 Produtos</div>
-                    </div>
-                    <input type="text" class="form-input search-input" placeholder="🔍 Buscar..." id="reviewSearch" oninput="renderReviews()">
-                </div>
-                <div id="reviewsList" class="data-list"></div>
-            </div>
-            
-            <!-- Fees (Bairros) -->
-            <div id="feesPage" class="page">
-                <div class="page-header">
-                    <h3 style="margin:0;">💳 Taxas de Entrega por Bairro</h3>
-                    <button class="btn btn-primary" onclick="openFeeModal()">+ Novo Bairro</button>
-                </div>
-                <div class="card" style="margin-bottom:16px;">
-                    <p style="color:var(--text-muted);margin:0;">Configure a taxa de entrega para cada bairro. Pedidos usarão a taxa do bairro de destino.</p>
-                </div>
-                <div id="feesList" class="data-list"></div>
-            </div>
-            
-            <!-- Store Fees -->
-            <div id="storeFeesPage" class="page">
-                <div class="page-header">
-                    <h3 style="margin:0;">🏷️ Taxas da Plataforma por Loja</h3>
-                </div>
-                <div class="card" style="margin-bottom:16px;">
-                    <p style="color:var(--text-muted);margin:0;">Defina a taxa cobrada de cada loja: valor fixo por pedido ou percentual sobre vendas.</p>
-                </div>
-                <div id="storeFeesList" class="data-list"></div>
-            </div>
-            <!-- MÓDULO: ENVIAR NOTIFICAÇÕES ADMIN -->
-
-<div id="notificationsPage" class="page">
-    <div class="page-header">
-        <div class="topbar">
-            <h2 class="topbar-title">Notificações</h2>
-        </div>
-    </div>
-
-    <!-- Formulário -->
-    <div class="card" style="margin-bottom:20px;">
-        <div class="card-title">📢 Nova Notificação</div>
-        
-        <div class="form-group">
-            <label class="form-label">Destinatários</label>
-            <select class="form-input" id="notifTarget">
-                <option value="all">Todos os clientes</option>
-                <option value="select">Selecionar clientes</option>
-            </select>
-        </div>
-
-        <div class="form-group" id="userSelectGroup" style="display:none;">
-            <label class="form-label">Clientes (Ctrl+clique para múltiplos)</label>
-            <select class="form-input" id="notifUsers" multiple size="5"></select>
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Título</label>
-            <input type="text" class="form-input" id="notifTitle" placeholder="Título da notificação">
-        </div>
-        
-        <div class="form-group">
-            <label class="form-label">Mensagem</label>
-            <textarea class="form-input" id="notifMessage" rows="4" placeholder="Texto da mensagem"></textarea>
-        </div>
-
-        <div class="form-group">
-            <div class="setting-item" style="padding:12px 0;">
-                <div>
-                    <div class="setting-label">Usar FCM (Push)</div>
-                    <div class="setting-desc">Se desativado, usa localStorage (popup ao abrir app)</div>
-                </div>
-                <div class="toggle active" id="notifUseFCM" onclick="AdminNotifications.toggleFCM(this)"></div>
-            </div>
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="AdminNotifications.send()">
-            Enviar Notificação
-        </button>
-    </div>
-
-    <!-- Histórico -->
-    <div class="card">
-        <div class="card-header">
-            <div class="card-title">📋 Histórico</div>
-        </div>
-        <div id="notifHistoryList"></div>
-    </div>
-</div>
-            <!-- Finance -->
-            <div id="financePage" class="page">
-                <div class="stats-grid">
-                    <div class="stat-card green"><div class="stat-icon">💵</div><div class="stat-value" id="financeToday">R$ 0</div><div class="stat-label">Hoje</div></div>
-                    <div class="stat-card blue"><div class="stat-icon">📅</div><div class="stat-value" id="financeWeek">R$ 0</div><div class="stat-label">Esta Semana</div></div>
-                    <div class="stat-card purple"><div class="stat-icon">📆</div><div class="stat-value" id="financeMonth">R$ 0</div><div class="stat-label">Este Mês</div></div>
-                    <div class="stat-card yellow"><div class="stat-icon">🏦</div><div class="stat-value" id="platformFee">R$ 0</div><div class="stat-label">Taxa Plataforma</div></div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header"><div class="card-title">💳 Repasses Pendentes</div></div>
-                    <div id="pendingPayouts"></div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header"><div class="card-title">📊 Faturamento por Loja</div></div>
-                    <div id="storeRevenue"></div>
-                </div>
-            </div>
-            
-            <!-- Reports -->
-            <div id="reportsPage" class="page">
-                <div class="reports-grid">
-                    <div class="report-card" onclick="generateReport('orders')">
-                        <div class="report-icon">📦</div>
-                        <div class="report-title">Relatório de Pedidos</div>
-                        <div class="report-desc">Todos os pedidos do período</div>
-                    </div>
-                    <div class="report-card" onclick="generateReport('stores')">
-                        <div class="report-icon">🏪</div>
-                        <div class="report-title">Relatório de Lojas</div>
-                        <div class="report-desc">Performance das lojas</div>
-                    </div>
-                    <div class="report-card" onclick="generateReport('drivers')">
-                        <div class="report-icon">🛵</div>
-                        <div class="report-title">Relatório de Entregadores</div>
-                        <div class="report-desc">Entregas e ganhos</div>
-                    </div>
-                    <div class="report-card" onclick="generateReport('finance')">
-                        <div class="report-icon">💰</div>
-                        <div class="report-title">Relatório Financeiro</div>
-                        <div class="report-desc">Faturamento completo</div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Settings -->
-            <div id="settingsPage" class="page">
-                <div class="settings-section">
-                    <div class="settings-title">💰 Taxas Padrão da Plataforma</div>
-                    <div class="form-group">
-                        <label class="form-label">Taxa padrão por pedido (%)</label>
-                        <input type="number" class="form-input" id="platformFeePercent" value="10" step="0.5" style="max-width: 200px;">
+                        <label class="form-label">Nome completo *</label>
+                        <input type="text" class="form-input" id="regName" placeholder="Seu nome completo" autocomplete="name">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Taxa mínima por pedido (R$)</label>
-                        <input type="number" class="form-input" id="platformFeeMin" value="2" step="0.5" style="max-width: 200px;">
-                    </div>
-                </div>
-                
-                <div class="settings-section">
-                    <div class="settings-title">🛵 Entregadores</div>
-                    <div class="form-group">
-                        <label class="form-label">Ganho base por entrega (R$)</label>
-                        <input type="number" class="form-input" id="driverFee" value="5" step="0.5" style="max-width: 200px;">
+                        <label class="form-label">E-mail *</label>
+                        <input type="email" class="form-input" id="regEmail" placeholder="seu@email.com" autocomplete="email">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Bônus por km extra (R$)</label>
-                        <input type="number" class="form-input" id="driverKmBonus" value="1" step="0.5" style="max-width: 200px;">
+                        <label class="form-label">Telefone *</label>
+                        <input type="tel" class="form-input" id="regPhone" placeholder="(00) 00000-0000" autocomplete="tel" oninput="maskPhone(this)">
                     </div>
-                </div>
-                <div id="reviewsPage" class="page">
-    <!-- Header -->
-    <div class="page-header">
-        <div class="topbar">
-            <h2 class="topbar-title">Avaliações</h2>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="filter-bar" style="margin-bottom: 20px;">
-        <div class="filter-chips">
-            <div class="filter-chip active" data-filter="all">Todas</div>
-            <div class="filter-chip" data-filter="pending">Pendentes</div>
-            <div class="filter-chip" data-filter="purchased">Ações de Lojas</div>
-        </div>
-        <select class="filter-select" id="reviewStoreFilter">
-            <option value="">Todas as lojas</option>
-        </select>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-grid" style="margin-bottom: 20px;">
-        <div class="stat-card">
-            <div class="stat-icon">⭐</div>
-            <div class="stat-value" id="totalReviews">0</div>
-            <div class="stat-label">Total</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">📊</div>
-            <div class="stat-value" id="avgRating">0.0</div>
-            <div class="stat-label">Média Geral</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">💳</div>
-            <div class="stat-value" id="purchasedActions">0</div>
-            <div class="stat-label">Ações Compradas</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">🏪</div>
-            <div class="stat-value" id="storesWithCredits">0</div>
-            <div class="stat-label">Lojas c/ Crédito</div>
-        </div>
-    </div>
-
-    <!-- Lista de Avaliações -->
-    <div class="data-list" id="reviewsList"></div>
-</div>
-
-<!-- MODAL: Detalhes da Avaliação -->
-<div class="modal" id="reviewDetailModal">
-    <div class="modal-content modal-lg">
-        <div class="modal-header">
-            <h3 class="modal-title">Detalhes da Avaliação</h3>
-            <button class="modal-close" onclick="AdminReviews.closeModal()">&times;</button>
-        </div>
-        <div class="modal-body" id="reviewDetailContent"></div>
-    </div>
-</div>
-
-<!-- MODAL: Gerenciar Créditos da Loja -->
-<div class="modal" id="storeCreditsModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Créditos da Loja</h3>
-            <button class="modal-close" onclick="AdminReviews.closeModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div id="storeCreditsContent"></div>
-            <div class="form-group">
-                <label class="form-label">Adicionar Créditos</label>
-                <input type="number" class="form-input" id="creditsAmount" placeholder="Quantidade" min="1">
-            </div>
-            <button class="btn btn-primary btn-block" onclick="AdminReviews.addCredits()">Adicionar</button>
-        </div>
-    </div>
-</div>
-                <div class="settings-section">
-                    <div class="settings-title">🔔 Notificações</div>
-                    <div class="setting-item">
-                        <div class="setting-info"><div class="setting-label">Alertar novas lojas</div><div class="setting-desc">Receber alerta quando nova loja se cadastrar</div></div>
-                        <div class="toggle active" id="alertNewStore" onclick="this.classList.toggle('active')"></div>
+                    <div class="form-group">
+                        <label class="form-label">CPF</label>
+                        <input type="text" class="form-input" id="regCPF" placeholder="000.000.000-00" maxlength="14" oninput="maskCPF(this)">
                     </div>
-                    <div class="setting-item">
-                        <div class="setting-info"><div class="setting-label">Alertar pedidos cancelados</div><div class="setting-desc">Monitorar cancelamentos</div></div>
-                        <div class="toggle active" id="alertCancelled" onclick="this.classList.toggle('active')"></div>
+
+                    <button class="btn" onclick="goStep(2)">Próximo →</button>
+                    <button class="btn btn-secondary" onclick="window.location.href='index.html'">Já tenho cadastro</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Veículo e trabalho -->
+            <div id="step2" style="display:none;">
+                <div class="card-header">Veículo e Trabalho</div>
+                <div class="card-body">
+                    <div class="steps">
+                        <div class="step done"></div>
+                        <div class="step active"></div>
+                        <div class="step"></div>
                     </div>
-                </div>
-                
-                <button class="btn btn-primary" onclick="saveSettings()">Salvar Configurações</button>
-            </div>
-        </main>
-    </div>
-    
-    <!-- Store Modal -->
-    <div class="modal" id="storeModal">
-        <div class="modal-content modal-lg">
-            <div class="modal-header"><div class="modal-title">Detalhes da Loja</div><button class="modal-close" onclick="closeModal('storeModal')">×</button></div>
-            <div class="modal-body" id="storeModalBody"></div>
-            <div class="modal-footer" id="storeModalFooter"></div>
-        </div>
-    </div>
-    
-  <!-- Store Edit Modal -->
-<div class="modal" id="storeEditModal">
-    <div class="modal-content modal-lg">
-        <div class="modal-header"><div class="modal-title">Editar Loja</div><button class="modal-close" onclick="closeModal('storeEditModal')">×</button></div>
-        <div class="modal-body">
-            <input type="hidden" id="storeEditId">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Nome da Loja</label><input type="text" class="form-input" id="storeEditName"></div>
-                <div class="form-group"><label class="form-label">Categoria</label><input type="text" class="form-input" id="storeEditCategory"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Email do Proprietário</label><input type="email" class="form-input" id="storeEditEmail"></div>
-                <div class="form-group"><label class="form-label">Senha de Acesso</label><input type="text" class="form-input" id="storeEditPassword" placeholder="Senha para login da loja"></div>
-                <div class="form-group"><label class="form-label">Telefone</label><input type="tel" class="form-input" id="storeEditPhone"></div>
-                
-            </div>
-            <div class="form-group"><label class="form-label">Endereço</label><input type="text" class="form-input" id="storeEditAddress"></div>
-            <div class="form-group">
-                <label class="form-label">Imagem</label>
-                <input type="file" accept="image/*" onchange="previewImage(this, 'storeEditImage', 'storeImgPreview')" style="margin-bottom:8px;">
-                <input type="url" class="form-input" id="storeEditImage" placeholder="Ou cole a URL">
-                <div id="storeImgPreview" class="img-preview"></div>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Emoji</label><input type="text" class="form-input" id="storeEditEmoji" maxlength="2"></div>
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="form-input" id="storeEditStatus">
-                        <option value="active">Ativa</option>
-                        <option value="pending">Pendente</option>
-                        <option value="blocked">Bloqueada</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Aberta?</label>
-                    <select class="form-input" id="storeEditOpen">
-                        <option value="true">Sim</option>
-                        <option value="false">Não</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('storeEditModal')">Cancelar</button>
-            <button class="btn btn-primary" onclick="saveStoreEdit()">Salvar</button>
-        </div>
-    </div>
-</div>
-    
-<!-- Product Edit Modal -->
-<div class="modal" id="productEditModal">
-    <div class="modal-content">
-        <div class="modal-header"><div class="modal-title" id="productEditTitle">Novo Produto</div><button class="modal-close" onclick="closeModal('productEditModal')">×</button></div>
-        <div class="modal-body">
-            <input type="hidden" id="productEditId">
-            <div class="form-group"><label class="form-label">Nome</label><input type="text" class="form-input" id="productEditName"></div>
-            <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-input" id="productEditDesc" rows="2"></textarea></div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Preço (R$)</label><input type="number" class="form-input" id="productEditPrice" step="0.01"></div>
-                <div class="form-group"><label class="form-label">Categoria</label><input type="text" class="form-input" id="productEditCategory"></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Imagem</label>
-                <input type="file" accept="image/*" onchange="previewImage(this, 'productEditImage', 'productImgPreview')" style="margin-bottom:8px;">
-                <input type="url" class="form-input" id="productEditImage" placeholder="Ou cole a URL">
-                <div id="productImgPreview" class="img-preview"></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Disponível?</label>
-                <select class="form-input" id="productEditAvailable">
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                </select>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" onclick="closeModal('productEditModal')">Cancelar</button>
-            <button class="btn btn-primary" onclick="saveProduct()">Salvar</button>
-        </div>
-    </div>
-</div>
-    <!-- Product Edit Modal -->
-    <div class="modal" id="productEditModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title" id="productEditTitle">Novo Produto</div><button class="modal-close" onclick="closeModal('productEditModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="productEditId">
-                <div class="form-group"><label class="form-label">Nome</label><input type="text" class="form-input" id="productEditName"></div>
-                <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-input" id="productEditDesc" rows="2"></textarea></div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">Preço (R$)</label><input type="number" class="form-input" id="productEditPrice" step="0.01"></div>
-                    <div class="form-group"><label class="form-label">Categoria</label><input type="text" class="form-input" id="productEditCategory"></div>
-                </div>
-                <div class="form-group"><label class="form-label">URL da Imagem</label><input type="url" class="form-input" id="productEditImage"></div>
-                <div class="form-group">
-                    <label class="form-label">Disponível?</label>
-                    <select class="form-input" id="productEditAvailable">
-                        <option value="true">Sim</option>
-                        <option value="false">Não</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('productEditModal')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveProduct()">Salvar</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Driver Modal -->
-    <div class="modal" id="driverModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title" id="driverModalTitle">Novo Entregador</div><button class="modal-close" onclick="closeModal('driverModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="driverId">
-                <div class="form-group"><label class="form-label">Nome Completo</label><input type="text" class="form-input" id="driverName" placeholder="Nome do entregador"></div>
-                <div class="form-group"><label class="form-label">E-mail (login)</label><input type="email" class="form-input" id="driverEmail" placeholder="email@exemplo.com"></div>
-                <div class="form-group"><label class="form-label">Senha</label><input type="text" class="form-input" id="driverPassword" placeholder="Senha para acesso"></div>
-                <div class="form-group"><label class="form-label">Telefone</label><input type="tel" class="form-input" id="driverPhone" placeholder="(00) 00000-0000"></div>
-                <div class="form-group"><label class="form-label">CPF</label><input type="text" class="form-input" id="driverCPF" placeholder="000.000.000-00"></div>
-                <div class="form-group"><label class="form-label">Veículo</label>
-                    <select class="form-input" id="driverVehicle">
-                        <option value="moto">🏍️ Moto</option>
-                        <option value="bicicleta">🚲 Bicicleta</option>
-                        <option value="carro">🚗 Carro</option>
-                    </select>
-                </div>
-                <div class="form-group"><label class="form-label">Placa (se aplicável)</label><input type="text" class="form-input" id="driverPlate" placeholder="ABC-1234"></div>
-                <div class="form-group"><label class="form-label">PIX (para pagamento)</label><input type="text" class="form-input" id="driverPix" placeholder="Chave PIX"></div>
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="form-input" id="driverStatus">
-                        <option value="active">Ativo</option>
-                        <option value="pending">Pendente</option>
-                        <option value="blocked">Bloqueado</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('driverModal')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveDriver()">Salvar</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- User Modal -->
-    <div class="modal" id="userModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title" id="userModalTitle">Detalhes do Cliente</div><button class="modal-close" onclick="closeModal('userModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="userId">
-                <div class="form-group"><label class="form-label">Nome</label><input type="text" class="form-input" id="userName"></div>
-                <div class="form-group"><label class="form-label">E-mail</label><input type="email" class="form-input" id="userEmail"></div>
-                <div class="form-group"><label class="form-label">Telefone</label><input type="tel" class="form-input" id="userPhone"></div>
-                <div class="form-group"><label class="form-label">CPF</label><input type="text" class="form-input" id="userCPF"></div>
-                <hr style="border-color:var(--border);margin:16px 0;">
-                <h4 style="margin:0 0 12px 0;">📍 Endereço Principal</h4>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">Rua</label><input type="text" class="form-input" id="userStreet"></div>
-                    <div class="form-group" style="max-width:100px;"><label class="form-label">Nº</label><input type="text" class="form-input" id="userNumber"></div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">Bairro</label><input type="text" class="form-input" id="userNeighborhood"></div>
-                    <div class="form-group"><label class="form-label">Cidade</label><input type="text" class="form-input" id="userCity"></div>
-                </div>
-                <div class="form-group"><label class="form-label">Complemento</label><input type="text" class="form-input" id="userComplement"></div>
-                <div class="form-group"><label class="form-label">Referência</label><input type="text" class="form-input" id="userReference"></div>
-                <div class="form-row">
-                    <div class="form-group"><label class="form-label">Latitude</label><input type="text" class="form-input" id="userLat"></div>
-                    <div class="form-group"><label class="form-label">Longitude</label><input type="text" class="form-input" id="userLng"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('userModal')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveUser()">Salvar</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- User Orders Modal -->
-    <div class="modal" id="userOrdersModal">
-        <div class="modal-content modal-lg">
-            <div class="modal-header"><div class="modal-title">📦 Pedidos do Cliente</div><button class="modal-close" onclick="closeModal('userOrdersModal')">×</button></div>
-            <div class="modal-body" id="userOrdersBody"></div>
-        </div>
-    </div>
-    
-    <!-- Order Modal -->
-    <div class="modal" id="orderModal">
-        <div class="modal-content modal-lg">
-            <div class="modal-header"><div class="modal-title">Detalhes do Pedido</div><button class="modal-close" onclick="closeModal('orderModal')">×</button></div>
-            <div class="modal-body" id="orderModalBody"></div>
-            <div class="modal-footer" id="orderModalFooter"></div>
-        </div>
-    </div>
-    
-    <!-- Cancel Order Modal -->
-    <div class="modal" id="cancelOrderModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title">❌ Cancelar Pedido</div><button class="modal-close" onclick="closeModal('cancelOrderModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="cancelOrderId">
-                <p style="margin-bottom:16px;">Informe o motivo do cancelamento. O cliente será notificado.</p>
-                <div class="form-group">
-                    <label class="form-label">Motivo</label>
-                    <select class="form-input" id="cancelReason" onchange="toggleCustomReason()">
-                        <option value="Loja fechada">Loja fechada</option>
-                        <option value="Produto indisponível">Produto indisponível</option>
-                        <option value="Endereço fora da área de entrega">Endereço fora da área</option>
-                        <option value="Problemas com pagamento">Problemas com pagamento</option>
-                        <option value="Pedido duplicado">Pedido duplicado</option>
-                        <option value="custom">Outro motivo...</option>
-                    </select>
-                </div>
-                <div class="form-group" id="customReasonGroup" style="display:none;">
-                    <label class="form-label">Descreva o motivo</label>
-                    <textarea class="form-input" id="cancelCustomReason" rows="3" placeholder="Descreva o motivo do cancelamento..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('cancelOrderModal')">Voltar</button>
-                <button class="btn btn-danger" onclick="confirmCancelOrder()">Confirmar Cancelamento</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Review Modal -->
-    <div class="modal" id="reviewModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title">⭐ Editar Avaliação</div><button class="modal-close" onclick="closeModal('reviewModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="reviewId">
-                <div class="form-group">
-                    <label class="form-label">Atendimento (1-5)</label>
-                    <input type="number" class="form-input" id="reviewService" min="1" max="5">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Qualidade (1-5)</label>
-                    <input type="number" class="form-input" id="reviewQuality" min="1" max="5">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tempo de Entrega (1-5)</label>
-                    <input type="number" class="form-input" id="reviewTime" min="1" max="5">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Custo-Benefício (1-5)</label>
-                    <input type="number" class="form-input" id="reviewValue" min="1" max="5">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Comentário</label>
-                    <textarea class="form-input" id="reviewComment" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="form-input" id="reviewStatus">
-                        <option value="visible">Visível</option>
-                        <option value="hidden">Oculto</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('reviewModal')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveReview()">Salvar</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Fee Modal -->
-    <div class="modal" id="feeModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title" id="feeModalTitle">Nova Taxa de Bairro</div><button class="modal-close" onclick="closeModal('feeModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="feeId">
-                <div class="form-group"><label class="form-label">Nome do Bairro</label><input type="text" class="form-input" id="feeName" placeholder="Ex: Centro"></div>
-                <div class="form-group"><label class="form-label">Cidade</label><input type="text" class="form-input" id="feeCity" placeholder="Ex: São Paulo"></div>
-                <div class="form-group"><label class="form-label">Taxa de Entrega (R$)</label><input type="number" class="form-input" id="feeValue" step="0.50" placeholder="5.00"></div>
-                <div class="form-group"><label class="form-label">Tempo Estimado (min)</label><input type="number" class="form-input" id="feeTime" placeholder="30"></div>
-                <div class="form-group">
-                    <label class="form-label">Ativo?</label>
-                    <select class="form-input" id="feeActive">
-                        <option value="true">Sim</option>
-                        <option value="false">Não</option>
-                    </select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('feeModal')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveFee()">Salvar</button>
-            </div>
-        </div>
-    </div>
-    <!-- Products Modal -->
-<div class="modal" id="productsModal">
-    <div class="modal-content modal-lg">
-        <div class="modal-header">
-            <div class="modal-title">📦 Produtos da Loja</div>
-            <button class="modal-close" onclick="closeModal('productsModal')">×</button>
-        </div>
-        <div class="modal-body">
-            <input type="hidden" id="productsStoreId">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <span id="productsStoreName" style="font-weight:600;"></span>
-                <button class="btn btn-primary btn-sm" onclick="openProductEditModal()">+ Novo Produto</button>
-            </div>
-            <div id="productsList"></div>
-        </div>
-    </div>
-</div>
-    <!-- Store Fee Modal -->
-    <div class="modal" id="storeFeeModal">
-        <div class="modal-content">
-            <div class="modal-header"><div class="modal-title">🏷️ Taxa da Loja</div><button class="modal-close" onclick="closeModal('storeFeeModal')">×</button></div>
-            <div class="modal-body">
-                <input type="hidden" id="storeFeeId">
-                <p id="storeFeeName" style="font-weight:600;margin-bottom:16px;"></p>
-                <div class="form-group">
-                    <label class="form-label">Tipo de Taxa</label>
-                    <select class="form-input" id="storeFeeType" onchange="toggleFeeInputs()">
-                        <option value="percent">Percentual (%)</option>
-                        <option value="fixed">Valor Fixo (R$)</option>
-                    </select>
-                </div>
-                <div class="form-group" id="storeFeePercentGroup">
-                    <label class="form-label">Percentual por Venda (%)</label>
-                    <input type="number" class="form-input" id="storeFeePercent" step="0.5" placeholder="10">
-                </div>
-                <div class="form-group" id="storeFeeFixedGroup" style="display:none;">
-                    <label class="form-label">Valor Fixo por Pedido (R$)</label>
-                    <input type="number" class="form-input" id="storeFeeFixed" step="0.01" placeholder="0.25">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('storeFeeModal')">Cancelar</button>
-                <button class="btn btn-primary" onclick="saveStoreFee()">Salvar</button>
-            </div>
-        </div>
-    </div>
-<!-- MÓDULO: CRIAR CUPONS -->
 
-<div id="couponsPage" class="page">
-    <div class="page-header">
-        <div class="topbar">
-            <h2 class="topbar-title">Cupons</h2>
-            <button class="btn btn-primary btn-sm" onclick="AdminCoupons.openCreate()">
-                + Criar Cupom
-            </button>
-        </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-grid" style="margin-bottom:20px;">
-        <div class="stat-card">
-            <div class="stat-icon">🎫</div>
-            <div class="stat-value" id="totalCoupons">0</div>
-            <div class="stat-label">Total</div>
-        </div>
-        <div class="stat-card green">
-            <div class="stat-icon">✅</div>
-            <div class="stat-value" id="activeCoupons">0</div>
-            <div class="stat-label">Ativos</div>
-        </div>
-        <div class="stat-card purple">
-            <div class="stat-icon">📊</div>
-            <div class="stat-value" id="usedCoupons">0</div>
-            <div class="stat-label">Usados</div>
-        </div>
-        <div class="stat-card yellow">
-            <div class="stat-icon">⏰</div>
-            <div class="stat-value" id="expiredCoupons">0</div>
-            <div class="stat-label">Expirados</div>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="filter-bar" style="margin-bottom:20px;">
-        <div class="filter-chips">
-            <div class="filter-chip active" data-filter="all">Todos</div>
-            <div class="filter-chip" data-filter="active">Ativos</div>
-            <div class="filter-chip" data-filter="expired">Expirados</div>
-        </div>
-    </div>
-
-    <!-- Lista -->
-    <div class="data-list" id="couponsList"></div>
-</div>
-
-<!-- MODAL: Criar/Editar Cupom -->
-<div class="modal" id="couponModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title" id="couponModalTitle">Criar Cupom</h3>
-            <button class="modal-close" onclick="AdminCoupons.closeModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="form-group">
-                <label class="form-label">Código do Cupom</label>
-                <input type="text" class="form-input" id="couponCode" placeholder="PRIMEIRACOMPRA" style="text-transform:uppercase;">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Tipo de Desconto</label>
-                <select class="form-input" id="couponType">
-                    <option value="percent">Porcentagem (%)</option>
-                    <option value="fixed">Valor Fixo (R$)</option>
-                </select>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Valor</label>
-                    <input type="number" class="form-input" id="couponValue" placeholder="10" min="0" step="0.01">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Pedido Mínimo (R$)</label>
-                    <input type="number" class="form-input" id="couponMinValue" placeholder="0" min="0" step="0.01">
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Limite de Usos</label>
-                    <input type="number" class="form-input" id="couponLimit" placeholder="0 = ilimitado" min="0">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Validade</label>
-                    <input type="date" class="form-input" id="couponExpiry">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Loja Específica (opcional)</label>
-                <select class="form-input" id="couponStore">
-                    <option value="">Todas as lojas</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <div class="setting-item" style="padding:12px 0;">
-                    <div>
-                        <div class="setting-label">Cupom Ativo</div>
-                        <div class="setting-desc">Desative para pausar sem deletar</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Veículo *</label>
+                            <select class="form-input" id="regVehicle">
+                                <option value="moto">🏍️ Moto</option>
+                                <option value="bicicleta">🚲 Bicicleta</option>
+                                <option value="carro">🚗 Carro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Placa</label>
+                            <input type="text" class="form-input" id="regPlate" placeholder="ABC-1D23" maxlength="8" style="text-transform:uppercase;">
+                        </div>
                     </div>
-                    <div class="toggle active" id="couponActive"></div>
+                    <div class="form-group">
+                        <label class="form-label">Chave PIX (para recebimentos)</label>
+                        <input type="text" class="form-input" id="regPix" placeholder="CPF, telefone ou e-mail">
+                    </div>
+
+                    <button class="btn" onclick="goStep(3)">Próximo →</button>
+                    <button class="btn btn-secondary" onclick="goStep(1)">← Voltar</button>
                 </div>
             </div>
 
-            <button class="btn btn-primary btn-block" onclick="AdminCoupons.save()" id="saveCouponBtn">
-                Criar Cupom
-            </button>
+            <!-- Step 3: Senha -->
+            <div id="step3" style="display:none;">
+                <div class="card-header">Criar Senha</div>
+                <div class="card-body">
+                    <div class="steps">
+                        <div class="step done"></div>
+                        <div class="step done"></div>
+                        <div class="step active"></div>
+                    </div>
+
+                    <div class="info-box warning">
+                        ⚠️ Após o cadastro, você receberá um e-mail de confirmação. Seu acesso ficará pendente até aprovação do administrador.
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Senha *</label>
+                        <div class="password-wrap">
+                            <input type="password" class="form-input" id="regPassword" placeholder="Mínimo 6 caracteres" oninput="checkStrength()">
+                            <button class="password-toggle" onclick="togglePassword('regPassword', this)">👁</button>
+                        </div>
+                        <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+                        <div class="strength-text" id="strengthText"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirmar senha *</label>
+                        <div class="password-wrap">
+                            <input type="password" class="form-input" id="regPasswordConfirm" placeholder="Repita a senha">
+                            <button class="password-toggle" onclick="togglePassword('regPasswordConfirm', this)">👁</button>
+                        </div>
+                    </div>
+
+                    <label class="terms-check">
+                        <input type="checkbox" id="regTerms">
+                        <span>Declaro que as informações são verdadeiras e aceito os termos de uso da plataforma Pedrad.</span>
+                    </label>
+
+                    <button class="btn" id="submitBtn" onclick="submitRegistration()">Criar Cadastro</button>
+                    <button class="btn btn-secondary" onclick="goStep(2)">← Voltar</button>
+                </div>
+            </div>
+
+            <!-- Success -->
+            <div id="stepSuccess" style="display:none;">
+                <div class="success-screen">
+                    <div class="success-icon">✅</div>
+                    <div class="success-title">Cadastro Enviado!</div>
+                    <div class="success-text">
+                        Seu cadastro foi recebido e está aguardando aprovação.<br><br>
+                        📧 Um e-mail de verificação foi enviado para <strong id="successEmail"></strong>.<br>
+                        Confirme seu e-mail enquanto aguarda.<br><br>
+                        Você será notificado quando seu cadastro for aprovado.
+                    </div>
+                    <button class="btn" style="margin-top:24px;" onclick="window.location.href='index.html'">Ir para Login</button>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="index.js"></script>
-    <script src="admin-reviews.js"></script>
-<script src="admin-notifications.js"></script>
-<script src="admin-coupons.js"></script>
+    <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAnIJRcUxN-0swpVnonPbJjTSK87o4CQ_g",
+        authDomain: "pedrad-814d0.firebaseapp.com",
+        projectId: "pedrad-814d0",
+        storageBucket: "pedrad-814d0.appspot.com",
+        messagingSenderId: "293587190550",
+        appId: "1:293587190550:web:80c9399f82847c80e20637"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // ==================== NAVIGATION ====================
+    function goStep(n) {
+        if (n === 2 && !validateStep1()) return;
+        if (n === 3 && !validateStep2()) return;
+        document.querySelectorAll('[id^="step"]').forEach(el => el.style.display = 'none');
+        document.getElementById('step' + n).style.display = 'block';
+    }
+
+    function validateStep1() {
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const phone = document.getElementById('regPhone').value.trim();
+        if (!name) { showToast('Informe seu nome'); return false; }
+        if (name.split(' ').length < 2) { showToast('Informe nome e sobrenome'); return false; }
+        if (!email || !email.includes('@')) { showToast('E-mail inválido'); return false; }
+        if (phone.replace(/\D/g, '').length < 10) { showToast('Telefone inválido'); return false; }
+        return true;
+    }
+
+    function validateStep2() {
+        // Vehicle is always valid (has default)
+        return true;
+    }
+
+    // ==================== PASSWORD ====================
+    function togglePassword(inputId, btn) {
+        const inp = document.getElementById(inputId);
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+        btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+    }
+
+    function checkStrength() {
+        const pw = document.getElementById('regPassword').value;
+        const fill = document.getElementById('strengthFill');
+        const text = document.getElementById('strengthText');
+        let score = 0;
+        if (pw.length >= 6) score++;
+        if (pw.length >= 8) score++;
+        if (/[A-Z]/.test(pw)) score++;
+        if (/[0-9]/.test(pw)) score++;
+        if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+        const levels = [
+            { w: '0%', c: 'var(--border)', t: '' },
+            { w: '20%', c: 'var(--danger)', t: 'Muito fraca' },
+            { w: '40%', c: 'var(--danger)', t: 'Fraca' },
+            { w: '60%', c: 'var(--warning)', t: 'Média' },
+            { w: '80%', c: 'var(--success)', t: 'Forte' },
+            { w: '100%', c: 'var(--success)', t: 'Muito forte' }
+        ];
+        const l = levels[score];
+        fill.style.width = l.w;
+        fill.style.background = l.c;
+        text.textContent = l.t;
+        text.style.color = l.c;
+    }
+
+    // ==================== MASKS ====================
+    function maskPhone(el) {
+        let v = el.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+        else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+        el.value = v;
+    }
+    function maskCPF(el) {
+        let v = el.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length > 9) v = `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6,9)}-${v.slice(9)}`;
+        else if (v.length > 6) v = `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6)}`;
+        else if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
+        el.value = v;
+    }
+
+    // ==================== SUBMIT ====================
+    async function submitRegistration() {
+        const name = document.getElementById('regName').value.trim();
+        const email = document.getElementById('regEmail').value.trim().toLowerCase();
+        const phone = document.getElementById('regPhone').value.trim();
+        const cpf = document.getElementById('regCPF').value.trim();
+        const vehicle = document.getElementById('regVehicle').value;
+        const plate = document.getElementById('regPlate').value.trim().toUpperCase();
+        const pix = document.getElementById('regPix').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regPasswordConfirm').value;
+        const terms = document.getElementById('regTerms').checked;
+
+        if (!password || password.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres'); return; }
+        if (password !== confirm) { showToast('Senhas não conferem'); return; }
+        if (!terms) { showToast('Aceite os termos para continuar'); return; }
+
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Criando...';
+
+        try {
+            // Check if email already in use in drivers collection
+            const existing = await db.collection('drivers').where('email', '==', email).limit(1).get();
+            if (!existing.empty) {
+                showToast('Este e-mail já está cadastrado');
+                btn.disabled = false; btn.textContent = 'Criar Cadastro';
+                return;
+            }
+
+            // Create Firebase Auth account
+            const cred = await auth.createUserWithEmailAndPassword(email, password);
+
+            // Send verification email
+            await cred.user.sendEmailVerification();
+
+            // Create driver doc in Firestore
+            await db.collection('drivers').add({
+                authUid: cred.user.uid,
+                name,
+                email,
+                phone: phone.replace(/\D/g, ''),
+                cpf: cpf.replace(/\D/g, ''),
+                vehicle,
+                plate,
+                pix,
+                status: 'pending',       // Aguardando aprovação
+                emailVerified: false,
+                rating: 5.0,
+                online: false,
+                maxSimultaneousOrders: 1,
+                bairrosPermitidos: [],
+                bairrosBanidos: [],
+                selfRegistered: true,     // Marca que veio do auto-cadastro
+                registeredAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Sign out (can't use app until approved)
+            await auth.signOut();
+
+            // Show success
+            document.getElementById('successEmail').textContent = email;
+            document.querySelectorAll('[id^="step"]').forEach(el => el.style.display = 'none');
+            document.getElementById('stepSuccess').style.display = 'block';
+
+        } catch (err) {
+            console.error(err);
+            const msgs = {
+                'auth/email-already-in-use': 'Este e-mail já possui uma conta',
+                'auth/invalid-email': 'E-mail inválido',
+                'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres)'
+            };
+            showToast(msgs[err.code] || 'Erro: ' + err.message);
+            btn.disabled = false; btn.textContent = 'Criar Cadastro';
+        }
+    }
+
+    // ==================== UTILS ====================
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3500);
+    }
+    </script>
 </body>
 </html>
