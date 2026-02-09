@@ -7,276 +7,268 @@
     <meta name="theme-color" content="#000000">
     <style>
         :root {
-            --bg: #000; --bg-card: #0a0a0a; --bg-input: #171717;
-            --text: #fff; --text-muted: #737373; --border: #262626;
+            --bg: #000; --bg-card: #0a0a0a; --bg-input: #111;
+            --text: #fff; --text-muted: #666; --border: #1a1a1a;
             --primary: #fff; --success: #22c55e; --danger: #ef4444;
-            --warning: #f59e0b; --radius: 12px;
+            --warning: #f59e0b; --radius: 10px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg); color: var(--text); min-height: 100vh;
-            display: flex; align-items: center; justify-content: center; padding: 20px;
+            display: flex; align-items: flex-start; justify-content: center;
+            padding: 24px 16px 60px;
         }
-        .container { width: 100%; max-width: 460px; }
-
-        .logo {
-            text-align: center; margin-bottom: 32px;
-        }
-        .logo-icon { font-size: 3rem; margin-bottom: 8px; }
-        .logo h1 {
-            font-size: 0.85rem; font-weight: 300; letter-spacing: 3px;
-            text-transform: uppercase; color: var(--text-muted);
-        }
-        .logo p { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
-
-        .card {
-            background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: var(--radius); overflow: hidden;
-        }
-        .card-header {
-            padding: 20px 24px; border-bottom: 1px solid var(--border);
-            font-size: 0.9rem; font-weight: 500; letter-spacing: 0.5px;
-        }
-        .card-body { padding: 24px; }
-
-        .form-group { margin-bottom: 16px; }
-        .form-label {
-            display: block; margin-bottom: 6px; font-size: 0.7rem;
-            color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;
-        }
-        .form-input {
-            width: 100%; padding: 12px 14px; border-radius: 8px;
-            border: 1px solid var(--border); background: var(--bg-input);
-            color: var(--text); font-size: 0.9rem; transition: border-color 0.2s;
-        }
-        .form-input:focus { outline: none; border-color: var(--primary); }
-        .form-input::placeholder { color: var(--text-muted); }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-        .password-wrap { position: relative; }
-        .password-wrap .form-input { padding-right: 44px; }
-        .password-toggle {
-            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-            background: none; border: none; color: var(--text-muted); cursor: pointer;
-            font-size: 1.1rem; padding: 4px;
-        }
-
-        .strength-bar {
-            height: 3px; border-radius: 2px; background: var(--border);
-            margin-top: 8px; overflow: hidden;
-        }
-        .strength-fill {
-            height: 100%; border-radius: 2px; transition: all 0.3s;
-            width: 0; background: var(--danger);
-        }
-        .strength-text {
-            font-size: 0.68rem; color: var(--text-muted); margin-top: 4px;
-        }
-
-        .btn {
-            width: 100%; padding: 14px; border-radius: 8px; border: 1px solid var(--primary);
-            background: var(--primary); color: #000; font-size: 0.85rem;
-            font-weight: 600; cursor: pointer; transition: all 0.2s;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
+        .container { width: 100%; max-width: 480px; }
+        .logo { text-align: center; margin-bottom: 28px; }
+        .logo h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+        .logo p { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .card-header { padding: 18px 22px; border-bottom: 1px solid var(--border); font-size: 0.82rem; font-weight: 600; letter-spacing: 0.3px; }
+        .card-body { padding: 22px; }
+        .steps { display: flex; gap: 6px; margin-bottom: 22px; }
+        .step { flex: 1; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.3s; }
+        .step.active { background: var(--text-muted); }
+        .step.done { background: var(--primary); }
+        .step-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; margin-bottom: 5px; font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+        .form-label .req { color: var(--danger); }
+        .form-input { width: 100%; padding: 11px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 0.88rem; transition: border-color 0.2s; }
+        .form-input:focus { outline: none; border-color: #333; }
+        .form-input::placeholder { color: #444; }
+        .form-input.error { border-color: var(--danger); }
+        .form-hint { font-size: 0.65rem; color: var(--text-muted); margin-top: 3px; }
+        .form-hint.error { color: var(--danger); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        select.form-input { cursor: pointer; }
+        .option-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        .option-btn { flex: 1; min-width: 80px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-input); color: var(--text-muted); font-size: 0.78rem; text-align: center; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+        .option-btn:hover { border-color: #333; color: var(--text); }
+        .option-btn.selected { border-color: var(--primary); color: var(--primary); background: rgba(255,255,255,0.05); }
+        .check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; cursor: pointer; }
+        .check-item input[type="checkbox"] { margin-top: 2px; accent-color: var(--primary); width: 16px; height: 16px; flex-shrink: 0; }
+        .check-item span { font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; }
+        .schedule-grid { display: grid; gap: 8px; }
+        .schedule-row { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 8px; align-items: center; }
+        .schedule-day { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); }
+        .schedule-input { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text); font-size: 0.82rem; text-align: center; width: 100%; }
+        .schedule-input:focus { outline: none; border-color: #333; }
+        .schedule-input:disabled { opacity: 0.3; }
+        .schedule-check { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); cursor: pointer; }
+        .schedule-check input { accent-color: var(--primary); }
+        .pw-wrap { position: relative; }
+        .pw-wrap .form-input { padding-right: 56px; }
+        .pw-toggle { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.72rem; padding: 4px 6px; }
+        .pw-toggle:hover { color: var(--text); }
+        .strength-bar { height: 2px; border-radius: 1px; background: var(--border); margin-top: 6px; overflow: hidden; }
+        .strength-fill { height: 100%; border-radius: 1px; transition: all 0.3s; width: 0; }
+        .strength-text { font-size: 0.65rem; color: var(--text-muted); margin-top: 3px; }
+        .beta-box { padding: 12px 14px; border: 1px dashed #333; border-radius: 8px; margin-bottom: 16px; }
+        .beta-box .check-item span { color: #a855f7; }
+        .btn { width: 100%; padding: 13px; border-radius: 8px; border: 1px solid var(--primary); background: var(--primary); color: #000; font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; }
         .btn:hover { background: transparent; color: var(--primary); }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-        .btn-secondary {
-            background: transparent; color: var(--text); border-color: var(--border);
-            font-weight: 400; margin-top: 12px;
-        }
-        .btn-secondary:hover { border-color: var(--primary); }
-
-        .info-box {
-            padding: 14px 16px; border-radius: 8px; font-size: 0.8rem;
-            line-height: 1.5; margin-bottom: 20px;
-        }
-        .info-box.warning {
-            background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
-            color: var(--warning);
-        }
-        .info-box.success {
-            background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3);
-            color: var(--success);
-        }
-        .info-box.danger {
-            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
-            color: var(--danger);
-        }
-
-        /* Steps indicator */
-        .steps { display: flex; gap: 8px; margin-bottom: 24px; }
-        .step {
-            flex: 1; height: 3px; border-radius: 2px; background: var(--border);
-            transition: background 0.3s;
-        }
-        .step.active { background: var(--primary); }
-        .step.done { background: var(--success); }
-
-        /* Success screen */
-        .success-screen { text-align: center; padding: 40px 24px; }
-        .success-icon { font-size: 4rem; margin-bottom: 16px; }
-        .success-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 8px; }
-        .success-text { color: var(--text-muted); font-size: 0.85rem; line-height: 1.6; }
-
-        .terms-check {
-            display: flex; align-items: flex-start; gap: 10px;
-            margin-bottom: 20px; cursor: pointer;
-        }
-        .terms-check input { margin-top: 3px; accent-color: var(--primary); }
-        .terms-check span { font-size: 0.78rem; color: var(--text-muted); line-height: 1.4; }
-
-        .toast {
-            position: fixed; bottom: 24px; left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--bg-card); padding: 14px 24px; border-radius: 8px;
-            border: 1px solid var(--border); z-index: 300; opacity: 0;
-            transition: all 0.3s; font-size: 0.85rem;
-        }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-ghost { background: transparent; color: var(--text-muted); border-color: var(--border); font-weight: 400; margin-top: 10px; }
+        .btn-ghost:hover { border-color: #444; color: var(--text); }
+        .info-box { padding: 12px 14px; border-radius: 8px; font-size: 0.78rem; line-height: 1.5; margin-bottom: 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text-muted); }
+        .success-screen { text-align: center; padding: 40px 22px; }
+        .success-text { color: var(--text-muted); font-size: 0.82rem; line-height: 1.6; }
+        .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--bg-card); padding: 13px 22px; border-radius: 8px; border: 1px solid var(--border); z-index: 300; opacity: 0; transition: all 0.3s; font-size: 0.82rem; max-width: 90%; text-align: center; }
         .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 8px; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (max-width: 480px) {
-            .form-row { grid-template-columns: 1fr; }
-        }
+        @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } .schedule-row { grid-template-columns: 70px 1fr 1fr; } }
     </style>
 </head>
 <body>
     <div class="toast" id="toast"></div>
-
     <div class="container">
         <div class="logo">
-            <div class="logo-icon">🛵</div>
-            <h1>Pedrad</h1>
+            <h1>Pedra Delivery</h1>
             <p>Cadastro de Entregador</p>
         </div>
-
         <div class="card">
-            <!-- Step 1: Dados pessoais -->
+
+            <!-- STEP 1: Dados Pessoais -->
             <div id="step1">
                 <div class="card-header">Dados Pessoais</div>
                 <div class="card-body">
-                    <div class="steps">
-                        <div class="step active"></div>
-                        <div class="step"></div>
-                        <div class="step"></div>
-                    </div>
-
+                    <div class="steps"><div class="step active"></div><div class="step"></div><div class="step"></div><div class="step"></div></div>
+                    <div class="step-label">Etapa 1 de 4</div>
                     <div class="form-group">
-                        <label class="form-label">Nome completo *</label>
-                        <input type="text" class="form-input" id="regName" placeholder="Seu nome completo" autocomplete="name">
+                        <label class="form-label">Nome completo <span class="req">*</span></label>
+                        <input type="text" class="form-input" id="regName" placeholder="Nome e sobrenome" autocomplete="name">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">E-mail *</label>
-                        <input type="email" class="form-input" id="regEmail" placeholder="seu@email.com" autocomplete="email">
+                        <label class="form-label">CPF <span class="req">*</span></label>
+                        <input type="text" class="form-input" id="regCPF" placeholder="000.000.000-00" maxlength="14" oninput="maskCPF(this)">
+                        <div class="form-hint" id="cpfHint"></div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Telefone *</label>
+                        <label class="form-label">Telefone / WhatsApp <span class="req">*</span></label>
                         <input type="tel" class="form-input" id="regPhone" placeholder="(00) 00000-0000" autocomplete="tel" oninput="maskPhone(this)">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">CPF</label>
-                        <input type="text" class="form-input" id="regCPF" placeholder="000.000.000-00" maxlength="14" oninput="maskCPF(this)">
+                        <label class="form-label">E-mail <span class="req">*</span></label>
+                        <input type="email" class="form-input" id="regEmail" placeholder="seu@email.com" autocomplete="email">
+                        <div class="form-hint">Usado para login e recuperacao de senha</div>
                     </div>
-
-                    <button class="btn" onclick="goStep(2)">Próximo →</button>
-                    <button class="btn btn-secondary" onclick="window.location.href='index.html'">Já tenho cadastro</button>
+                    <button class="btn" onclick="goStep(2)">Continuar</button>
+                    <button class="btn btn-ghost" onclick="window.location.href='index.html'">Ja tenho cadastro</button>
                 </div>
             </div>
 
-            <!-- Step 2: Veículo e trabalho -->
+            <!-- STEP 2: Endereco -->
             <div id="step2" style="display:none;">
-                <div class="card-header">Veículo e Trabalho</div>
+                <div class="card-header">Endereco</div>
                 <div class="card-body">
-                    <div class="steps">
-                        <div class="step done"></div>
-                        <div class="step active"></div>
-                        <div class="step"></div>
+                    <div class="steps"><div class="step done"></div><div class="step active"></div><div class="step"></div><div class="step"></div></div>
+                    <div class="step-label">Etapa 2 de 4</div>
+                    <div class="form-group">
+                        <label class="form-label">Rua <span class="req">*</span></label>
+                        <input type="text" class="form-input" id="regStreet" placeholder="Nome da rua">
                     </div>
-
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Veículo *</label>
-                            <select class="form-input" id="regVehicle">
-                                <option value="moto">🏍️ Moto</option>
-                                <option value="bicicleta">🚲 Bicicleta</option>
-                                <option value="carro">🚗 Carro</option>
-                            </select>
+                            <label class="form-label">Numero <span class="req">*</span></label>
+                            <input type="text" class="form-input" id="regNumber" placeholder="123">
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Complemento</label>
+                            <input type="text" class="form-input" id="regComplement" placeholder="Apto, bloco...">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Bairro <span class="req">*</span></label>
+                            <input type="text" class="form-input" id="regNeighborhood" placeholder="Bairro">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cidade <span class="req">*</span></label>
+                            <input type="text" class="form-input" id="regCity" placeholder="Cidade" value="Rondonópolis">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="goStep(3)">Continuar</button>
+                    <button class="btn btn-ghost" onclick="goStep(1)">Voltar</button>
+                </div>
+            </div>
+
+            <!-- STEP 3: Veiculo e Disponibilidade -->
+            <div id="step3" style="display:none;">
+                <div class="card-header">Veiculo e Disponibilidade</div>
+                <div class="card-body">
+                    <div class="steps"><div class="step done"></div><div class="step done"></div><div class="step active"></div><div class="step"></div></div>
+                    <div class="step-label">Etapa 3 de 4</div>
+
+                    <div class="form-group">
+                        <label class="form-label">Veiculo <span class="req">*</span></label>
+                        <div class="option-group" id="vehicleGroup">
+                            <div class="option-btn selected" onclick="selectOption('vehicleGroup', this, 'moto')">Moto</div>
+                            <div class="option-btn" onclick="selectOption('vehicleGroup', this, 'bicicleta')">Bicicleta</div>
+                            <div class="option-btn" onclick="selectOption('vehicleGroup', this, 'carro')">Carro</div>
+                        </div>
+                    </div>
+                    <div class="form-row" id="plateRow">
                         <div class="form-group">
                             <label class="form-label">Placa</label>
                             <input type="text" class="form-input" id="regPlate" placeholder="ABC-1D23" maxlength="8" style="text-transform:uppercase;">
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Chave PIX (para recebimentos)</label>
-                        <input type="text" class="form-input" id="regPix" placeholder="CPF, telefone ou e-mail">
+                        <div class="form-group">
+                            <label class="form-label">Modelo do veiculo</label>
+                            <input type="text" class="form-input" id="regVehicleModel" placeholder="Ex: Honda CG 160">
+                        </div>
                     </div>
 
-                    <button class="btn" onclick="goStep(3)">Próximo →</button>
-                    <button class="btn btn-secondary" onclick="goStep(1)">← Voltar</button>
+                    <div class="form-group">
+                        <label class="form-label">Possui bag propria? <span class="req">*</span></label>
+                        <div class="option-group" id="bagGroup">
+                            <div class="option-btn" onclick="selectOption('bagGroup', this, 'sim')">Sim</div>
+                            <div class="option-btn" onclick="selectOption('bagGroup', this, 'nao')">Nao</div>
+                            <div class="option-btn" onclick="selectOption('bagGroup', this, 'pretendo')">Pretendo comprar</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Situacao atual</label>
+                        <div class="option-group" id="expGroup">
+                            <div class="option-btn" onclick="selectOption('expGroup', this, 'nenhum')">Primeira vez</div>
+                            <div class="option-btn" onclick="selectOption('expGroup', this, 'app')">Trabalho em app</div>
+                            <div class="option-btn" onclick="selectOption('expGroup', this, 'fixo')">Fixo em loja</div>
+                        </div>
+                    </div>
+                    <div class="form-group" id="expDetailGroup" style="display:none;">
+                        <label class="form-label" id="expDetailLabel">Qual aplicativo?</label>
+                        <input type="text" class="form-input" id="regExpDetail" placeholder="">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Chave PIX (para recebimentos)</label>
+                        <input type="text" class="form-input" id="regPix" placeholder="CPF, telefone ou email">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="margin-bottom:10px;">Horarios disponiveis</label>
+                        <div class="schedule-grid" id="scheduleGrid"></div>
+                    </div>
+
+                    <button class="btn" onclick="goStep(4)">Continuar</button>
+                    <button class="btn btn-ghost" onclick="goStep(2)">Voltar</button>
                 </div>
             </div>
 
-            <!-- Step 3: Senha -->
-            <div id="step3" style="display:none;">
+            <!-- STEP 4: Senha -->
+            <div id="step4" style="display:none;">
                 <div class="card-header">Criar Senha</div>
                 <div class="card-body">
-                    <div class="steps">
-                        <div class="step done"></div>
-                        <div class="step done"></div>
-                        <div class="step active"></div>
-                    </div>
-
-                    <div class="info-box warning">
-                        ⚠️ Após o cadastro, você receberá um e-mail de confirmação. Seu acesso ficará pendente até aprovação do administrador.
-                    </div>
-
+                    <div class="steps"><div class="step done"></div><div class="step done"></div><div class="step done"></div><div class="step active"></div></div>
+                    <div class="step-label">Etapa 4 de 4</div>
+                    <div class="info-box">Apos o cadastro voce recebera um email de confirmacao. Seu acesso ficara pendente ate a aprovacao do administrador.</div>
                     <div class="form-group">
-                        <label class="form-label">Senha *</label>
-                        <div class="password-wrap">
-                            <input type="password" class="form-input" id="regPassword" placeholder="Mínimo 6 caracteres" oninput="checkStrength()">
-                            <button class="password-toggle" onclick="togglePassword('regPassword', this)">👁</button>
+                        <label class="form-label">Senha <span class="req">*</span></label>
+                        <div class="pw-wrap">
+                            <input type="password" class="form-input" id="regPassword" placeholder="Minimo 6 caracteres" oninput="checkStrength()">
+                            <button class="pw-toggle" onclick="togglePw('regPassword', this)">ver</button>
                         </div>
                         <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
                         <div class="strength-text" id="strengthText"></div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Confirmar senha *</label>
-                        <div class="password-wrap">
+                        <label class="form-label">Confirmar senha <span class="req">*</span></label>
+                        <div class="pw-wrap">
                             <input type="password" class="form-input" id="regPasswordConfirm" placeholder="Repita a senha">
-                            <button class="password-toggle" onclick="togglePassword('regPasswordConfirm', this)">👁</button>
+                            <button class="pw-toggle" onclick="togglePw('regPasswordConfirm', this)">ver</button>
                         </div>
                     </div>
-
-                    <label class="terms-check">
+                    <label class="check-item">
                         <input type="checkbox" id="regTerms">
-                        <span>Declaro que as informações são verdadeiras e aceito os termos de uso da plataforma Pedrad.</span>
+                        <span>Declaro que as informacoes sao verdadeiras e aceito os termos de uso da plataforma Pedra Delivery.</span>
                     </label>
-
-                    <button class="btn" id="submitBtn" onclick="submitRegistration()">Criar Cadastro</button>
-                    <button class="btn btn-secondary" onclick="goStep(2)">← Voltar</button>
+                    <div class="beta-box">
+                        <label class="check-item" style="padding:0;">
+                            <input type="checkbox" id="regBeta">
+                            <span>Aceito fazer parte da fase de testes (opcional)</span>
+                        </label>
+                    </div>
+                    <button class="btn" id="submitBtn" onclick="submitRegistration()">Enviar Cadastro</button>
+                    <button class="btn btn-ghost" onclick="goStep(3)">Voltar</button>
                 </div>
             </div>
 
-            <!-- Success -->
+            <!-- SUCCESS -->
             <div id="stepSuccess" style="display:none;">
                 <div class="success-screen">
-                    <div class="success-icon">✅</div>
-                    <div class="success-title">Cadastro Enviado!</div>
+                    <div style="font-size:1.6rem;margin-bottom:12px;font-weight:300;">Cadastro enviado</div>
                     <div class="success-text">
-                        Seu cadastro foi recebido e está aguardando aprovação.<br><br>
-                        📧 Um e-mail de verificação foi enviado para <strong id="successEmail"></strong>.<br>
-                        Confirme seu e-mail enquanto aguarda.<br><br>
-                        Você será notificado quando seu cadastro for aprovado.
+                        Seu cadastro foi recebido e esta aguardando aprovacao.<br><br>
+                        Um email de verificacao foi enviado para<br>
+                        <strong id="successEmail" style="color:var(--text);"></strong><br><br>
+                        Confirme seu email enquanto aguarda. Voce sera notificado quando seu cadastro for aprovado.
                     </div>
-                    <button class="btn" style="margin-top:24px;" onclick="window.location.href='index.html'">Ir para Login</button>
+                    <button class="btn" style="margin-top:28px;" onclick="window.location.href='index.html'">Ir para Login</button>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -296,161 +288,228 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    const formData = { vehicle: 'moto', bag: '', experience: '' };
+
+    // ==================== SCHEDULE ====================
+    const days = [
+        { key: 'seg', label: 'Segunda' }, { key: 'ter', label: 'Terca' },
+        { key: 'qua', label: 'Quarta' }, { key: 'qui', label: 'Quinta' },
+        { key: 'sex', label: 'Sexta' }, { key: 'sab', label: 'Sabado' },
+        { key: 'dom', label: 'Domingo' }
+    ];
+
+    function buildSchedule() {
+        document.getElementById('scheduleGrid').innerHTML = days.map(d => `
+            <div class="schedule-row">
+                <label class="schedule-check">
+                    <input type="checkbox" id="sched_${d.key}" checked onchange="toggleDay('${d.key}')">
+                    ${d.label}
+                </label>
+                <input type="time" class="schedule-input" id="sched_${d.key}_from" value="08:00">
+                <input type="time" class="schedule-input" id="sched_${d.key}_to" value="22:00">
+            </div>
+        `).join('');
+    }
+
+    function toggleDay(key) {
+        const on = document.getElementById('sched_' + key).checked;
+        document.getElementById('sched_' + key + '_from').disabled = !on;
+        document.getElementById('sched_' + key + '_to').disabled = !on;
+    }
+
+    function getSchedule() {
+        const s = {};
+        days.forEach(d => {
+            if (document.getElementById('sched_' + d.key).checked) {
+                s[d.key] = {
+                    from: document.getElementById('sched_' + d.key + '_from').value,
+                    to: document.getElementById('sched_' + d.key + '_to').value
+                };
+            }
+        });
+        return s;
+    }
+    buildSchedule();
+
+    // ==================== OPTIONS ====================
+    function selectOption(gid, btn, value) {
+        document.getElementById(gid).querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        if (gid === 'vehicleGroup') {
+            formData.vehicle = value;
+            document.getElementById('plateRow').style.display = value === 'bicicleta' ? 'none' : 'grid';
+        }
+        if (gid === 'bagGroup') formData.bag = value;
+        if (gid === 'expGroup') {
+            formData.experience = value;
+            const det = document.getElementById('expDetailGroup');
+            const lbl = document.getElementById('expDetailLabel');
+            const inp = document.getElementById('regExpDetail');
+            if (value === 'app') { det.style.display = 'block'; lbl.textContent = 'Qual aplicativo?'; inp.placeholder = 'Ex: iFood, 99Food, Rappi...'; }
+            else if (value === 'fixo') { det.style.display = 'block'; lbl.textContent = 'Qual loja ou estabelecimento?'; inp.placeholder = 'Nome do estabelecimento'; }
+            else { det.style.display = 'none'; }
+        }
+    }
+
     // ==================== NAVIGATION ====================
     function goStep(n) {
         if (n === 2 && !validateStep1()) return;
         if (n === 3 && !validateStep2()) return;
+        if (n === 4 && !validateStep3()) return;
         document.querySelectorAll('[id^="step"]').forEach(el => el.style.display = 'none');
         document.getElementById('step' + n).style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function validateStep1() {
-        const name = document.getElementById('regName').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const phone = document.getElementById('regPhone').value.trim();
-        if (!name) { showToast('Informe seu nome'); return false; }
-        if (name.split(' ').length < 2) { showToast('Informe nome e sobrenome'); return false; }
-        if (!email || !email.includes('@')) { showToast('E-mail inválido'); return false; }
-        if (phone.replace(/\D/g, '').length < 10) { showToast('Telefone inválido'); return false; }
+        const name = val('regName');
+        const cpf = val('regCPF');
+        const phone = val('regPhone');
+        const email = val('regEmail');
+        if (!name) return fail('Informe seu nome');
+        if (name.split(' ').filter(w => w.length > 0).length < 2) return fail('Informe nome e sobrenome');
+        if (!cpf || cpf.replace(/\D/g, '').length < 11) return fail('CPF incompleto');
+        if (!validateCPF(cpf.replace(/\D/g, ''))) return fail('CPF invalido');
+        if (phone.replace(/\D/g, '').length < 10) return fail('Telefone invalido');
+        if (!email || !email.includes('@') || !email.includes('.')) return fail('Email invalido');
         return true;
     }
-
     function validateStep2() {
-        // Vehicle is always valid (has default)
+        if (!val('regStreet')) return fail('Informe a rua');
+        if (!val('regNumber')) return fail('Informe o numero');
+        if (!val('regNeighborhood')) return fail('Informe o bairro');
+        if (!val('regCity')) return fail('Informe a cidade');
+        return true;
+    }
+    function validateStep3() {
+        if (!formData.bag) return fail('Informe se possui bag propria');
         return true;
     }
 
-    // ==================== PASSWORD ====================
-    function togglePassword(inputId, btn) {
-        const inp = document.getElementById(inputId);
-        inp.type = inp.type === 'password' ? 'text' : 'password';
-        btn.textContent = inp.type === 'password' ? '👁' : '🙈';
-    }
-
-    function checkStrength() {
-        const pw = document.getElementById('regPassword').value;
-        const fill = document.getElementById('strengthFill');
-        const text = document.getElementById('strengthText');
-        let score = 0;
-        if (pw.length >= 6) score++;
-        if (pw.length >= 8) score++;
-        if (/[A-Z]/.test(pw)) score++;
-        if (/[0-9]/.test(pw)) score++;
-        if (/[^A-Za-z0-9]/.test(pw)) score++;
-
-        const levels = [
-            { w: '0%', c: 'var(--border)', t: '' },
-            { w: '20%', c: 'var(--danger)', t: 'Muito fraca' },
-            { w: '40%', c: 'var(--danger)', t: 'Fraca' },
-            { w: '60%', c: 'var(--warning)', t: 'Média' },
-            { w: '80%', c: 'var(--success)', t: 'Forte' },
-            { w: '100%', c: 'var(--success)', t: 'Muito forte' }
-        ];
-        const l = levels[score];
-        fill.style.width = l.w;
-        fill.style.background = l.c;
-        text.textContent = l.t;
-        text.style.color = l.c;
+    // ==================== CPF ====================
+    function validateCPF(cpf) {
+        cpf = cpf.replace(/\D/g, '');
+        if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+        let sum = 0;
+        for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+        let d1 = 11 - (sum % 11); if (d1 >= 10) d1 = 0;
+        if (parseInt(cpf[9]) !== d1) return false;
+        sum = 0;
+        for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+        let d2 = 11 - (sum % 11); if (d2 >= 10) d2 = 0;
+        return parseInt(cpf[10]) === d2;
     }
 
     // ==================== MASKS ====================
     function maskPhone(el) {
         let v = el.value.replace(/\D/g, '').slice(0, 11);
-        if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
-        else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+        if (v.length > 6) v = '(' + v.slice(0,2) + ') ' + v.slice(2,7) + '-' + v.slice(7);
+        else if (v.length > 2) v = '(' + v.slice(0,2) + ') ' + v.slice(2);
         el.value = v;
     }
     function maskCPF(el) {
         let v = el.value.replace(/\D/g, '').slice(0, 11);
-        if (v.length > 9) v = `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6,9)}-${v.slice(9)}`;
-        else if (v.length > 6) v = `${v.slice(0,3)}.${v.slice(3,6)}.${v.slice(6)}`;
-        else if (v.length > 3) v = `${v.slice(0,3)}.${v.slice(3)}`;
+        if (v.length > 9) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6,9)+'-'+v.slice(9);
+        else if (v.length > 6) v = v.slice(0,3)+'.'+v.slice(3,6)+'.'+v.slice(6);
+        else if (v.length > 3) v = v.slice(0,3)+'.'+v.slice(3);
         el.value = v;
+        const hint = document.getElementById('cpfHint');
+        const raw = el.value.replace(/\D/g, '');
+        if (raw.length === 11) {
+            if (validateCPF(raw)) { hint.textContent = 'CPF valido'; hint.className = 'form-hint'; hint.style.color = 'var(--success)'; el.classList.remove('error'); }
+            else { hint.textContent = 'CPF invalido'; hint.className = 'form-hint error'; el.classList.add('error'); }
+        } else { hint.textContent = ''; el.classList.remove('error'); }
+    }
+
+    // ==================== PASSWORD ====================
+    function togglePw(id, btn) {
+        const inp = document.getElementById(id);
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+        btn.textContent = inp.type === 'password' ? 'ver' : 'ocultar';
+    }
+    function checkStrength() {
+        const pw = document.getElementById('regPassword').value;
+        const fill = document.getElementById('strengthFill');
+        const text = document.getElementById('strengthText');
+        let s = 0;
+        if (pw.length >= 6) s++; if (pw.length >= 8) s++;
+        if (/[A-Z]/.test(pw)) s++; if (/[0-9]/.test(pw)) s++;
+        if (/[^A-Za-z0-9]/.test(pw)) s++;
+        const L = [{w:'0%',c:'var(--border)',t:''},{w:'20%',c:'var(--danger)',t:'Muito fraca'},{w:'40%',c:'var(--danger)',t:'Fraca'},{w:'60%',c:'var(--warning)',t:'Media'},{w:'80%',c:'var(--success)',t:'Forte'},{w:'100%',c:'var(--success)',t:'Muito forte'}][s];
+        fill.style.width=L.w; fill.style.background=L.c; text.textContent=L.t; text.style.color=L.c;
     }
 
     // ==================== SUBMIT ====================
     async function submitRegistration() {
-        const name = document.getElementById('regName').value.trim();
-        const email = document.getElementById('regEmail').value.trim().toLowerCase();
-        const phone = document.getElementById('regPhone').value.trim();
-        const cpf = document.getElementById('regCPF').value.trim();
-        const vehicle = document.getElementById('regVehicle').value;
-        const plate = document.getElementById('regPlate').value.trim().toUpperCase();
-        const pix = document.getElementById('regPix').value.trim();
         const password = document.getElementById('regPassword').value;
         const confirm = document.getElementById('regPasswordConfirm').value;
         const terms = document.getElementById('regTerms').checked;
+        if (!password || password.length < 6) return fail('Senha deve ter no minimo 6 caracteres');
+        if (password !== confirm) return fail('Senhas nao conferem');
+        if (!terms) return fail('Aceite os termos para continuar');
 
-        if (!password || password.length < 6) { showToast('Senha deve ter no mínimo 6 caracteres'); return; }
-        if (password !== confirm) { showToast('Senhas não conferem'); return; }
-        if (!terms) { showToast('Aceite os termos para continuar'); return; }
-
+        const email = val('regEmail').toLowerCase();
         const btn = document.getElementById('submitBtn');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner"></span> Criando...';
+        btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Enviando...';
 
         try {
-            // Check if email already in use in drivers collection
             const existing = await db.collection('drivers').where('email', '==', email).limit(1).get();
-            if (!existing.empty) {
-                showToast('Este e-mail já está cadastrado');
-                btn.disabled = false; btn.textContent = 'Criar Cadastro';
-                return;
-            }
+            if (!existing.empty) return fail('Este email ja esta cadastrado', btn);
+            const cpfRaw = val('regCPF').replace(/\D/g, '');
+            const existingCPF = await db.collection('drivers').where('cpf', '==', cpfRaw).limit(1).get();
+            if (!existingCPF.empty) return fail('Este CPF ja esta cadastrado', btn);
 
-            // Create Firebase Auth account
             const cred = await auth.createUserWithEmailAndPassword(email, password);
-
-            // Send verification email
             await cred.user.sendEmailVerification();
 
-            // Create driver doc in Firestore
             await db.collection('drivers').add({
                 authUid: cred.user.uid,
-                name,
-                email,
-                phone: phone.replace(/\D/g, ''),
-                cpf: cpf.replace(/\D/g, ''),
-                vehicle,
-                plate,
-                pix,
-                status: 'pending',       // Aguardando aprovação
+                name: val('regName'),
+                email: email,
+                cpf: cpfRaw,
+                phone: val('regPhone').replace(/\D/g, ''),
+                address: {
+                    street: val('regStreet'),
+                    number: val('regNumber'),
+                    complement: val('regComplement'),
+                    neighborhood: val('regNeighborhood'),
+                    city: val('regCity')
+                },
+                vehicle: formData.vehicle,
+                plate: val('regPlate').toUpperCase(),
+                vehicleModel: val('regVehicleModel'),
+                hasBag: formData.bag,
+                experience: formData.experience,
+                experienceDetail: val('regExpDetail'),
+                pix: val('regPix'),
+                schedule: getSchedule(),
+                betaTester: document.getElementById('regBeta').checked,
+                status: 'pending',
                 emailVerified: false,
                 rating: 5.0,
                 online: false,
                 maxSimultaneousOrders: 1,
                 bairrosPermitidos: [],
                 bairrosBanidos: [],
-                selfRegistered: true,     // Marca que veio do auto-cadastro
+                selfRegistered: true,
                 registeredAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Sign out (can't use app until approved)
             await auth.signOut();
-
-            // Show success
             document.getElementById('successEmail').textContent = email;
             document.querySelectorAll('[id^="step"]').forEach(el => el.style.display = 'none');
             document.getElementById('stepSuccess').style.display = 'block';
-
         } catch (err) {
             console.error(err);
-            const msgs = {
-                'auth/email-already-in-use': 'Este e-mail já possui uma conta',
-                'auth/invalid-email': 'E-mail inválido',
-                'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres)'
-            };
-            showToast(msgs[err.code] || 'Erro: ' + err.message);
-            btn.disabled = false; btn.textContent = 'Criar Cadastro';
+            const msgs = { 'auth/email-already-in-use':'Este email ja possui uma conta', 'auth/invalid-email':'Email invalido', 'auth/weak-password':'Senha muito fraca' };
+            fail(msgs[err.code] || 'Erro: ' + err.message, btn);
         }
     }
 
     // ==================== UTILS ====================
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.textContent = msg; t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3500);
-    }
+    function val(id) { return document.getElementById(id).value.trim(); }
+    function fail(msg, btn) { showToast(msg); if (btn) { btn.disabled = false; btn.textContent = 'Enviar Cadastro'; } return false; }
+    function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3500); }
     </script>
 </body>
 </html>
